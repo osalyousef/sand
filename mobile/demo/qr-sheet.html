@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>سند — أساور الحجاج (عرض توضيحي)</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d0d0d;
+      --card: #161616;
+      --border: #262626;
+      --text: #fff;
+      --muted: #9ca3af;
+      --orange: #f97316;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --green: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px 24px 48px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    }
+    h1 { margin: 0 0 4px; font-size: 26px; }
+    .lede { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .qr {
+      background: #fff;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .qr canvas { display: block; }
+    .badge {
+      align-self: flex-start;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      border: 1px solid;
+      text-transform: uppercase;
+    }
+    .red    { color: var(--red);    border-color: var(--red); }
+    .yellow { color: var(--yellow); border-color: var(--yellow); }
+    .green  { color: var(--green);  border-color: var(--green); }
+    .name { font-weight: 800; font-size: 16px; text-align: center; }
+    .meta { color: var(--muted); font-size: 12px; text-align: center; }
+    .id { color: var(--orange); font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+    @media print {
+      body { background: #fff; color: #000; padding: 12px; }
+      .card { background: #fff; border-color: #ddd; }
+      .id { color: #b45309; }
+      .meta { color: #555; }
+      .lede { color: #555; }
+    }
+  </style>
+</head>
+<body>
+  <h1>سند — أساور الحجاج (عرض توضيحي)</h1>
+  <p class="lede">امسح أي رمز من كاميرا التطبيق لفتح بطاقة الحاج.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const pilgrims = [
+      { id: "SA-2024-NG-07231", name: "فاطمة عبدالله سيدي", meta: "74 سنة · نيجيريا",   risk: "red"    },
+      { id: "SA-2024-EG-04412", name: "محمد إبراهيم الفارسي", meta: "68 سنة · مصر",      risk: "red"    },
+      { id: "SA-2024-ID-09887", name: "سيتي نور حسنة",        meta: "62 سنة · إندونيسيا", risk: "yellow" },
+      { id: "SA-2024-TR-02156", name: "أحمد يلماز قايا",       meta: "55 سنة · تركيا",    risk: "yellow" },
+      { id: "SA-2024-MY-06329", name: "خديجة بنت أحمد",        meta: "41 سنة · ماليزيا",   risk: "green"  },
+      { id: "SA-2024-PK-01784", name: "علي حسن رضا",           meta: "49 سنة · باكستان",  risk: "green"  },
+    ];
+    const labels = { red: "حرج", yellow: "عالٍ", green: "منخفض" };
+    const grid = document.getElementById("grid");
+
+    pilgrims.forEach((p) => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <span class="badge ${p.risk}">${labels[p.risk]}</span>
+        <div class="qr"></div>
+        <div class="name">${p.name}</div>
+        <div class="meta">${p.meta}</div>
+        <div class="id">${p.id}</div>
+      `;
+      grid.appendChild(card);
+      QRCode.toCanvas(card.querySelector(".qr"), p.id, {
+        width: 200,
+        margin: 1,
+        color: { dark: "#000000", light: "#ffffff" },
+      });
+    });
+  </script>
+</body>
+</html>

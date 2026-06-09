@@ -4,3 +4,4 @@ node_modules/
 .expo/
 .next/
 *.log
+.DS_Store
