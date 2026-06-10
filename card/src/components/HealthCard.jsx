@@ -1,10 +1,10 @@
 import CardFront from './CardFront'
 import CardBack from './CardBack'
 
-// Credit-card proportions (ISO 7810 ID-1 ≈ 1.586:1), scaled up for screen.
+// Vertical ID-badge proportions, like the real Nusuk card.
 export default function HealthCard({ pilgrim, theme, flipped, onFlip }) {
   return (
-    <div className="card-scene w-[520px] max-w-full" style={{ aspectRatio: '1.586 / 1' }}>
+    <div className="card-scene mx-auto w-[340px] max-w-full" style={{ aspectRatio: '0.62 / 1' }}>
       <button
         type="button"
         onClick={onFlip}

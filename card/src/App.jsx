@@ -55,7 +55,7 @@ export default function App() {
         </div>
 
         {/* Card */}
-        <div id="print-area">
+        <div id="print-area" className="mx-auto w-full max-w-[340px]">
           <HealthCard
             pilgrim={pilgrim}
             theme={theme}

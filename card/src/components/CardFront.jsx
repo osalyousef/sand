@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { SaudiEmblem, NusukWordmark } from './Brand'
+import Field from './Field'
 
 function PilgrimPhoto({ photo, accent }) {
   // Show the real photo when available; fall back to a silhouette if it fails to load.
@@ -8,8 +10,8 @@ function PilgrimPhoto({ photo, accent }) {
   if (photo && !failed) {
     return (
       <div
-        className="h-[104px] w-[104px] overflow-hidden rounded-2xl bg-white shadow-inner ring-1 ring-black/10"
-        style={{ outline: `2px solid ${accent}22` }}
+        className="h-[96px] w-[96px] overflow-hidden rounded-full bg-white shadow-sm ring-1 ring-black/10"
+        style={{ outline: `3px solid ${accent}` }}
       >
         <img
           src={photo}
@@ -23,140 +25,93 @@ function PilgrimPhoto({ photo, accent }) {
 
   return (
     <div
-      className="flex h-[104px] w-[104px] items-center justify-center rounded-2xl bg-white shadow-inner ring-1 ring-black/10"
-      style={{ outline: `2px solid ${accent}22` }}
+      className="flex h-[96px] w-[96px] items-center justify-center rounded-full bg-slate-50 shadow-sm ring-1 ring-black/10"
+      style={{ outline: `3px solid ${accent}` }}
     >
-      <svg viewBox="0 0 24 24" className="h-16 w-16" style={{ color: `${accent}` }}>
-        <circle cx="12" cy="8" r="4" fill="currentColor" opacity="0.25" />
-        <path
-          d="M4 20c0-4 3.6-6 8-6s8 2 8 6"
-          fill="currentColor"
-          opacity="0.25"
-        />
+      <svg viewBox="0 0 24 24" className="h-16 w-16 text-slate-300">
+        <circle cx="12" cy="8" r="4" fill="currentColor" />
+        <path d="M4 20c0-4 3.6-6 8-6s8 2 8 6" fill="currentColor" />
       </svg>
-    </div>
-  )
-}
-
-function InfoCell({ labelEn, labelAr, value }) {
-  return (
-    <div>
-      <div className="flex items-baseline gap-1.5 text-[8.5px] font-semibold uppercase tracking-wide text-black/40">
-        <span>{labelEn}</span>
-        <span className="arabic text-[8.5px] normal-case tracking-normal">{labelAr}</span>
-      </div>
-      <div className="text-[13px] font-bold leading-tight text-black/85">{value}</div>
     </div>
   )
 }
 
 export default function CardFront({ pilgrim, theme }) {
   return (
-    <div
-      className="card-shadow flex h-full w-full flex-col overflow-hidden rounded-[18px] bg-white ring-1 ring-black/10"
-      style={{ backgroundColor: theme.tint }}
-    >
-      {/* Header bar */}
-      <div
-        className="flex items-center justify-between px-5 py-3 text-white"
-        style={{
-          background: `linear-gradient(100deg, ${theme.header} 0%, ${theme.headerDark} 100%)`,
-        }}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 ring-1 ring-white/25">
-            {/* Kaaba-ish mark */}
-            <svg viewBox="0 0 24 24" className="h-5 w-5 text-white">
-              <path d="M12 2 3 6.5v11L12 22l9-4.5v-11L12 2Z" fill="currentColor" opacity="0.9" />
-              <path d="M3 6.5 12 11l9-4.5M12 11v11" stroke="#ffffff" strokeWidth="0.8" opacity="0.5" fill="none" />
-            </svg>
-          </div>
+    <div className="card-shadow flex h-full w-full flex-col overflow-hidden rounded-[18px] bg-white ring-1 ring-black/10">
+      {/* Header — clean white, like the real Nusuk card */}
+      <div className="relative flex items-center justify-between border-b border-slate-100 px-4 pb-2.5 pt-3">
+        <div className="flex items-center gap-2">
+          <SaudiEmblem className="h-7 w-7" color="#0f8f86" />
           <div className="leading-tight">
-            <div className="text-[12.5px] font-extrabold tracking-tight">Hajj Health Platform</div>
-            <div className="arabic text-[11px] font-semibold text-white/85">منصة صحة الحاج</div>
+            <div className="text-[7px] font-semibold uppercase tracking-wider text-slate-400">
+              Kingdom of Saudi Arabia
+            </div>
+            <div className="text-[9.5px] font-extrabold tracking-tight text-slate-800">
+              Ministry of Hajj &amp; Umrah
+            </div>
+            <div className="arabic text-[8.5px] font-semibold text-slate-500">وزارة الحج والعمرة</div>
           </div>
         </div>
-        <div className="text-right leading-tight">
-          <div className="text-[8px] font-semibold uppercase tracking-widest text-white/70">Hajj Season</div>
-          <div className="text-[15px] font-extrabold tracking-tight">1446</div>
-        </div>
+        <NusukWordmark onGradient={false} />
       </div>
 
-      {/* Body */}
-      <div className="guilloche relative flex flex-1 items-stretch gap-4 px-5 py-4">
-        {/* Photo */}
-        <div className="flex flex-col items-center gap-2 pt-0.5">
-          <PilgrimPhoto photo={pilgrim.photo} accent={theme.accent} />
-          <span
-            className="rounded-full px-2.5 py-[3px] text-[8px] font-bold uppercase tracking-wider text-white"
-            style={{ backgroundColor: theme.accent }}
-          >
-            Pilgrim
-          </span>
-        </div>
-
-        {/* Info */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="mb-0.5">
-            <div className="truncate text-[18px] font-extrabold leading-tight text-black/90">
-              {pilgrim.name.en}
-            </div>
-            <div className="arabic truncate text-[15px] font-bold leading-tight text-black/70">
-              {pilgrim.name.ar}
-            </div>
-          </div>
-
-          {/* Risk badge */}
-          <div className="mb-2.5 mt-1">
-            <span
-              className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm"
-              style={{ backgroundColor: theme.badgeBg, color: theme.badgeText }}
-            >
-              {theme.warn && <span aria-hidden>⚠</span>}
-              <span>Risk: {theme.labelEn}</span>
-              <span className="arabic font-bold">{theme.labelAr}</span>
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            <div className="col-span-2">
-              <InfoCell labelEn="Patient ID" labelAr="رقم الحاج" value={pilgrim.id} />
-            </div>
-            <InfoCell
-              labelEn="Nationality"
-              labelAr="الجنسية"
-              value={pilgrim.nationality.en}
-            />
-            <InfoCell labelEn="Age" labelAr="العمر" value={`${pilgrim.age} yrs`} />
-            <InfoCell labelEn="Blood Type" labelAr="فصيلة الدم" value={pilgrim.bloodType} />
-          </div>
-        </div>
-
-        {/* QR */}
-        <div className="flex flex-col items-center justify-center gap-1.5">
-          <div className="rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/10">
-            <QRCodeSVG
-              value={pilgrim.id}
-              size={76}
-              level="M"
-              fgColor={theme.headerDark}
-              bgColor="#ffffff"
-            />
-          </div>
-          <span className="text-[7.5px] font-semibold uppercase tracking-wider text-black/40">
-            Scan ID
-          </span>
-        </div>
-      </div>
-
-      {/* Bottom strip */}
+      {/* Risk / category stripe (Nusuk uses colored stripes per category) */}
       <div
-        className="accent-pattern flex items-center justify-between px-5 py-2 text-white"
-        style={{ backgroundColor: theme.headerDark }}
+        className="flex items-center justify-center px-4 py-1 text-white"
+        style={{ backgroundColor: theme.accent }}
       >
-        <span className="arabic text-[10px] font-bold">سند ضيوف الرحمن</span>
-        <span className="text-[9px] font-bold uppercase tracking-widest text-white/85">
-          Hajj 1446
+        <span className="inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide">
+          {theme.warn && <span aria-hidden>⚠</span>}
+          <span>RISK: {theme.labelEn.toUpperCase()}</span>
+          <span className="arabic">{theme.labelAr}</span>
+        </span>
+      </div>
+
+      {/* Photo + name */}
+      <div className="guilloche flex flex-col items-center gap-1.5 px-3 pb-2 pt-3">
+        <PilgrimPhoto photo={pilgrim.photo} accent={theme.accent} />
+        <div className="w-full text-center">
+          <div className="break-words text-[14px] font-semibold leading-snug text-slate-900">
+            {pilgrim.name.en}
+          </div>
+          <div className="arabic break-words text-[12px] leading-snug text-[#444]">
+            {pilgrim.name.ar}
+          </div>
+          <div className="mt-0.5 text-[9px] font-medium text-slate-400">
+            {pilgrim.nationality.en} / <span className="arabic">{pilgrim.nationality.ar}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Info grid — paired fields, equal columns, centered divider */}
+      <div className="guilloche px-3">
+        <div
+          className="grid divide-x divide-slate-100 border border-slate-100"
+          style={{ gridTemplateColumns: '50% 50%' }}
+        >
+          <Field labelEn="PILGRIM ID" labelAr="رقم الحاج" value={pilgrim.id} className="border-b border-slate-100" />
+          <Field labelEn="IDENTITY NO." labelAr="رقم الهوية" value={pilgrim.identityId} className="border-b border-slate-100" style={{ textAlign: 'center' }} />
+          <Field labelEn="AGE" labelAr="العمر" value={`${pilgrim.age} yrs`} />
+          <Field labelEn="BLOOD TYPE" labelAr="فصيلة الدم" value={pilgrim.bloodType} style={{ textAlign: 'center' }} />
+        </div>
+      </div>
+
+      {/* QR */}
+      <div className="guilloche flex flex-1 flex-col items-center justify-center gap-1 pb-2">
+        <div className="rounded-lg bg-white p-1.5 shadow-sm ring-1 ring-black/10">
+          <QRCodeSVG value={pilgrim.id} size={108} level="M" fgColor="#1f2937" bgColor="#ffffff" />
+        </div>
+        <span className="text-[7px] font-semibold uppercase tracking-wider text-slate-400">
+          Scan ID
+        </span>
+      </div>
+
+      {/* Footer — neutral, single accent line */}
+      <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-1.5">
+        <span className="arabic text-[9px] font-bold text-slate-600">سند ضيوف الرحمن</span>
+        <span className="text-[7.5px] font-bold uppercase tracking-[0.2em] text-slate-400">
+          sanad · Hajj 1446
         </span>
       </div>
     </div>

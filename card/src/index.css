@@ -43,15 +43,12 @@ body {
   transform: rotateY(180deg);
 }
 
-/* subtle guilloché-style accent pattern for the bottom strip */
-.accent-pattern {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(255, 255, 255, 0.18) 0px,
-    rgba(255, 255, 255, 0.18) 1px,
-    transparent 1px,
-    transparent 7px
-  );
+/* Nusuk signature gradient, used sparingly for the wordmark text */
+.nusuk-text-gradient {
+  background-image: linear-gradient(100deg, #0f8f86 0%, #2b6fa8 50%, #7e3b97 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* faint watermark texture on the card body */
