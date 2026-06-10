@@ -1,0 +1,101 @@
+// Mock pilgrim records — no backend. One per risk level (0 = low, 1 = medium, 2 = high).
+
+export const RISK_THEMES = {
+  0: {
+    level: 0,
+    labelEn: 'Low',
+    labelAr: 'منخفض',
+    header: '#1a6b3c',
+    headerDark: '#13502d',
+    tint: '#e8f5ee',
+    badgeBg: '#1a6b3c',
+    badgeText: '#ffffff',
+    accent: '#1a6b3c',
+    warn: false,
+  },
+  1: {
+    level: 1,
+    labelEn: 'Medium',
+    labelAr: 'متوسط',
+    header: '#92640a',
+    headerDark: '#6f4c06',
+    tint: '#fef8e8',
+    badgeBg: '#92640a',
+    badgeText: '#ffffff',
+    accent: '#92640a',
+    warn: false,
+  },
+  2: {
+    level: 2,
+    labelEn: 'High',
+    labelAr: 'عالي',
+    header: '#8b1a1a',
+    headerDark: '#6b1212',
+    tint: '#fdeaea',
+    badgeBg: '#8b1a1a',
+    badgeText: '#ffffff',
+    accent: '#8b1a1a',
+    warn: true,
+  },
+}
+
+export const mockPilgrims = [
+  {
+    id: 'HAJ-2025-00751',
+    risk: 0,
+    name: { en: 'Marwan Alayef', ar: 'مروان العايف' },
+    nationality: { en: 'Saudi Arabia', ar: 'السعودية' },
+    age: 31,
+    bloodType: 'O+',
+    photo: '/goood4.jpg',
+    conditions: [
+      { en: 'Mild Asthma', ar: 'ربو خفيف' },
+    ],
+    allergies: [{ en: 'Dust', ar: 'الغبار' }],
+    medications: [{ en: 'Salbutamol inhaler', ar: 'بخاخ سالبوتامول' }],
+    emergency: { name: { en: 'Abdullah Alayef', ar: 'عبدالله العايف' }, phone: '+966 55 204 7788' },
+  },
+  {
+    id: 'HAJ-2025-00489',
+    risk: 1,
+    name: { en: 'Fatimah Yusuf', ar: 'فاطمة يوسف' },
+    nationality: { en: 'Egypt', ar: 'مصر' },
+    age: 57,
+    bloodType: 'A-',
+    photo: null,
+    conditions: [
+      { en: 'Hypertension', ar: 'ارتفاع ضغط الدم' },
+      { en: 'Type 2 Diabetes', ar: 'السكري النوع الثاني' },
+    ],
+    allergies: [{ en: 'Penicillin', ar: 'بنسلين' }],
+    medications: [
+      { en: 'Metformin 500mg', ar: 'ميتفورمين ٥٠٠ ملغ' },
+      { en: 'Amlodipine 5mg', ar: 'أملوديبين ٥ ملغ' },
+    ],
+    emergency: { name: { en: 'Omar Yusuf', ar: 'عمر يوسف' }, phone: '+20 100 555 8821' },
+  },
+  {
+    id: 'HAJ-2025-00102',
+    risk: 2,
+    name: { en: 'Mohammed Khan', ar: 'محمد خان' },
+    nationality: { en: 'Pakistan', ar: 'باكستان' },
+    age: 68,
+    bloodType: 'B+',
+    photo: null,
+    conditions: [
+      { en: 'Coronary Artery Disease', ar: 'مرض الشريان التاجي' },
+      { en: 'Chronic Kidney Disease', ar: 'مرض الكلى المزمن' },
+      { en: 'Asthma', ar: 'الربو' },
+    ],
+    allergies: [
+      { en: 'Aspirin', ar: 'أسبرين' },
+      { en: 'Sulfa drugs', ar: 'أدوية السلفا' },
+    ],
+    medications: [
+      { en: 'Clopidogrel 75mg', ar: 'كلوبيدوقرل ٧٥ ملغ' },
+      { en: 'Atorvastatin 40mg', ar: 'أتورفاستاتين ٤٠ ملغ' },
+      { en: 'Salbutamol inhaler', ar: 'بخاخ سالبوتامول' },
+    ],
+    emergency: { name: { en: 'Bilal Khan', ar: 'بلال خان' }, phone: '+92 300 412 9087' },
+  },
+]

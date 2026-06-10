@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- 3D flip ---- */
+.card-scene {
+  perspective: 1600px;
+}
+
+.card-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card-flipper.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  overflow: hidden;
+}
+
+.card-face--back {
+  transform: rotateY(180deg);
+}
+
+/* subtle guilloché-style accent pattern for the bottom strip */
+.accent-pattern {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.18) 0px,
+    rgba(255, 255, 255, 0.18) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+}
+
+/* faint watermark texture on the card body */
+.guilloche {
+  background-image: radial-gradient(
+      circle at 18% 22%,
+      rgba(0, 0, 0, 0.025) 0,
+      transparent 38%
+    ),
+    radial-gradient(circle at 88% 78%, rgba(0, 0, 0, 0.03) 0, transparent 40%);
+}
+
+.arabic {
+  font-family: 'Noto Sans Arabic', sans-serif;
+  direction: rtl;
+}
+
+/* ---- Print: show only the card ---- */
+@media print {
+  @page {
+    size: landscape;
+    margin: 12mm;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  #print-area,
+  #print-area * {
+    visibility: visible;
+  }
+
+  #print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* Freeze the flip during print so the visible face stays put */
+  .card-flipper {
+    transition: none !important;
+  }
+
+  .card-shadow {
+    box-shadow: none !important;
+  }
+}
