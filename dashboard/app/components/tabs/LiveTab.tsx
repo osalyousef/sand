@@ -5,9 +5,9 @@ import TeamsPanel from "@/app/components/live/TeamsPanel";
 export default function LiveTab() {
   return (
     <div className="flex gap-3 h-full">
-      <TeamsPanel />
-      <MapPanel />
       <AlertsFeed />
+      <MapPanel />
+      <TeamsPanel />
     </div>
   );
 }

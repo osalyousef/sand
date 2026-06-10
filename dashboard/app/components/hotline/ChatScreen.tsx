@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { UserRound } from "lucide-react";
 import type { MockContact, ChatMessage } from "@/lib/mock-data";
 
-export default function ChatScreen({ contact }: { contact: MockContact }) {
+export default function ChatScreen({ contact, onViewProfile }: { contact: MockContact; onViewProfile: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>(contact.messages ?? []);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
@@ -47,10 +48,18 @@ export default function ChatScreen({ contact }: { contact: MockContact }) {
             <p className="text-gray-500 text-xs">{contact.language} · {contact.issue}</p>
           </div>
         </div>
-        <span className="flex items-center gap-2 text-xs text-emerald-400">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          محادثة نشطة
-        </span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onViewProfile}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors"
+          >
+            <UserRound className="w-3.5 h-3.5" /> الملف الصحي
+          </button>
+          <span className="flex items-center gap-2 text-xs text-emerald-400">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            محادثة نشطة
+          </span>
+        </div>
       </div>
 
       {/* Messages */}

@@ -1,5 +1,19 @@
 import type { RiskLevel } from "./types";
 
+export interface AlertHistoryEntry {
+  id: string;
+  riskLevel: RiskLevel;
+  condition: string;        // what triggered it
+  resolution: string;       // how it was handled
+  resolved: boolean;
+  // vitals snapshot at the time of the alert
+  heartRate: number;
+  temperature: number;
+  oxygenLevel: number;
+  timeLabel: string;        // relative, e.g. "قبل ساعتين"
+  dateLabel: string;        // absolute, e.g. "٨ ذو الحجة · ١٤:٣٢"
+}
+
 export interface MockPilgrim {
   id: string;
   name: string;
@@ -22,6 +36,7 @@ export interface MockPilgrim {
   condition?: string;
   alertTime?: string;
   lastUpdate: string;
+  alertHistory: AlertHistoryEntry[];
 }
 
 export interface MockTeam {
@@ -44,6 +59,7 @@ export interface ChatMessage {
 export interface MockContact {
   id: string;
   type: "call" | "chat";
+  pilgrimId: string;        // links to a MOCK_PILGRIMS record
   pilgrimName: string;
   language: string;
   flag: string;
@@ -102,6 +118,37 @@ function riskFromVitals(hr: number, temp: number, o2: number): RiskLevel {
 
 const TIMES = ["0:32", "1:14", "2:05", "3:47", "5:20", "7:01", "9:33", "12:18"];
 
+const RESOLUTIONS = [
+  "تم إرسال فريق طبي",
+  "تمت المتابعة هاتفياً",
+  "نُقل إلى المستشفى الميداني",
+  "قُدّمت إسعافات أولية",
+  "تم الترطيب والمراقبة",
+];
+const HIJRI_DAYS = ["٧ ذو الحجة", "٨ ذو الحجة", "٩ ذو الحجة", "١٠ ذو الحجة"];
+const REL_TIMES = ["قبل ١٢ دقيقة", "قبل ٤٥ دقيقة", "قبل ساعتين", "قبل ٥ ساعات", "أمس", "قبل يومين"];
+const CLOCKS = ["٠٨:١٢", "١١:٤٥", "١٤:٣٢", "١٦:٠٧", "١٩:٢٠", "٢٢:٥١"];
+
+function buildAlertHistory(pilgrimSeed: number): AlertHistoryEntry[] {
+  const count = Math.floor(Math.random() * 5); // 0–4 past alerts
+  return Array.from({ length: count }, (_, k) => {
+    const level: RiskLevel = Math.random() > 0.6 ? "red" : "yellow";
+    const resolved = k > 0 || Math.random() > 0.3; // most past ones resolved
+    return {
+      id: `${pilgrimSeed}-A${k + 1}`,
+      riskLevel: level,
+      condition: pick(CONDITIONS),
+      resolution: pick(RESOLUTIONS),
+      resolved,
+      heartRate: rand(95, 135),
+      temperature: rand(37.8, 40.3, 1),
+      oxygenLevel: rand(88, 96),
+      timeLabel: REL_TIMES[k % REL_TIMES.length],
+      dateLabel: `${pick(HIJRI_DAYS)} · ${pick(CLOCKS)}`,
+    };
+  });
+}
+
 export const MOCK_PILGRIMS: MockPilgrim[] = Array.from({ length: 40 }, (_, i) => {
   const hr = rand(72, 130);
   const temp = rand(36.5, 40.2, 1);
@@ -138,6 +185,7 @@ export const MOCK_PILGRIMS: MockPilgrim[] = Array.from({ length: 40 }, (_, i) =>
     condition: Math.random() > 0.6 ? pick(CONDITIONS) : undefined,
     alertTime: Math.random() > 0.5 ? pick(TIMES) + " ago" : undefined,
     lastUpdate: `قبل ${rand(1, 9)} دقائق`,
+    alertHistory: buildAlertHistory(i + 1),
   };
 });
 
@@ -200,13 +248,13 @@ export const MOCK_TEAMS: MockTeam[] = [
 
 export const MOCK_CONTACTS: MockContact[] = [
   {
-    id: "C001", type: "call", pilgrimName: "Ahmad Al-Rashidi", language: "العربية", flag: "🇸🇦",
+    id: "C001", type: "call", pilgrimId: "P001", pilgrimName: "أحمد الراشدي", language: "العربية", flag: "🇸🇦",
     riskLevel: "red", issue: "ألم في الصدر وصعوبة في التنفس", waitTime: "٠:١٢",
     transcript: "أنا عندي ألم في صدري ولا أقدر أتنفس بشكل صحيح",
     translation: "أعاني من ألم في الصدر ولا أستطيع التنفس جيداً. أنا قرب الخيمة الخضراء في منى.",
   },
   {
-    id: "C002", type: "chat", pilgrimName: "Aisha Begum", language: "البنغالية", flag: "🇧🇩",
+    id: "C002", type: "chat", pilgrimId: "P004", pilgrimName: "عائشة بيغوم", language: "البنغالية", flag: "🇧🇩",
     riskLevel: "yellow", issue: "دوخة شديدة، احتمال ضربة شمس", waitTime: "٠:٤٥",
     messages: [
       { id: "m1", sender: "pilgrim", text: "আমার মাথা ঘুরছে, আমি হাঁটতে পারছি না", translation: "رأسي يدور، لا أستطيع المشي.", time: "14:02" },
@@ -214,13 +262,13 @@ export const MOCK_CONTACTS: MockContact[] = [
     ],
   },
   {
-    id: "C003", type: "call", pilgrimName: "Yusuf bin Ismail", language: "الماليزية", flag: "🇲🇾",
+    id: "C003", type: "call", pilgrimId: "P009", pilgrimName: "يوسف بن إسماعيل", language: "الماليزية", flag: "🇲🇾",
     riskLevel: "yellow", issue: "تائه، انفصل عن مجموعته", waitTime: "١:٢٠",
     transcript: "Saya terpisah dari kumpulan saya, saya tak tahu di mana saya",
     translation: "انفصلت عن مجموعتي ولا أعرف أين أنا. رقم مجموعتي MYS-447.",
   },
   {
-    id: "C004", type: "chat", pilgrimName: "Maryam El-Amin", language: "الفرنسية", flag: "🇲🇦",
+    id: "C004", type: "chat", pilgrimId: "P010", pilgrimName: "مريم الأمين", language: "الفرنسية", flag: "🇲🇦",
     riskLevel: "red", issue: "حالة سكري طارئة، انخفاض السكر", waitTime: "٠:٠٨",
     messages: [
       { id: "m1", sender: "pilgrim", text: "Je suis diabétique et je me sens très mal", translation: "أنا مصابة بالسكري وأشعر بتوعك شديد.", time: "14:05" },
@@ -229,14 +277,14 @@ export const MOCK_CONTACTS: MockContact[] = [
     ],
   },
   {
-    id: "C005", type: "chat", pilgrimName: "Bilal Siddiqui", language: "الأردية", flag: "🇵🇰",
+    id: "C005", type: "chat", pilgrimId: "P015", pilgrimName: "بلال صديقي", language: "الأردية", flag: "🇵🇰",
     riskLevel: "green", issue: "طلب تجديد دواء", waitTime: "٢:٣٠",
     messages: [
       { id: "m1", sender: "pilgrim", text: "میری بلڈ پریشر کی دوائی ختم ہوگئی ہے", translation: "نفد دواء ضغط الدم الخاص بي.", time: "13:58" },
     ],
   },
   {
-    id: "C006", type: "call", pilgrimName: "Ibrahim Okonkwo", language: "الإنجليزية", flag: "🇳🇬",
+    id: "C006", type: "call", pilgrimId: "P005", pilgrimName: "إبراهيم أوكونكو", language: "الإنجليزية", flag: "🇳🇬",
     riskLevel: "yellow", issue: "إرهاق وجفاف", waitTime: "٠:٣٣",
     transcript: "I feel very weak and dizzy, I haven't had water in hours",
     translation: "أشعر بضعف ودوار شديد، لم أشرب الماء منذ ساعات.",

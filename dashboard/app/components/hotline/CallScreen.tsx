@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mic, MicOff, Volume2, Ambulance, PhoneOff } from "lucide-react";
+import { Mic, MicOff, Volume2, Ambulance, PhoneOff, UserRound } from "lucide-react";
 import type { MockContact } from "@/lib/mock-data";
 
 const RISK_RING = { red: "ring-red-600", yellow: "ring-yellow-600", green: "ring-emerald-600" };
 
-export default function CallScreen({ contact }: { contact: MockContact }) {
+export default function CallScreen({ contact, onViewProfile }: { contact: MockContact; onViewProfile: () => void }) {
   const [seconds, setSeconds] = useState(0);
   const [muted, setMuted] = useState(false);
 
@@ -29,7 +29,15 @@ export default function CallScreen({ contact }: { contact: MockContact }) {
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           مكالمة جارية
         </span>
-        <span className="font-mono text-white text-sm">{mm}:{ss}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onViewProfile}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors"
+          >
+            <UserRound className="w-3.5 h-3.5" /> الملف الصحي
+          </button>
+          <span className="font-mono text-white text-sm">{mm}:{ss}</span>
+        </div>
       </div>
 
       {/* Caller */}

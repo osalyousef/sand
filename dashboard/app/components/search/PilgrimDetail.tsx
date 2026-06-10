@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
-import { Heart, Thermometer, Wind, AlertTriangle, Pill, Map, Ambulance } from "lucide-react";
-import type { MockPilgrim } from "@/lib/mock-data";
+import { Heart, Thermometer, Wind, AlertTriangle, Pill, Map, Ambulance, History, CheckCircle2, CircleDot } from "lucide-react";
+import type { MockPilgrim, AlertHistoryEntry } from "@/lib/mock-data";
 import { RISK_COLORS } from "@/lib/types";
 
 const RISK_LABEL = { red: "خطر", yellow: "تحذير", green: "آمن" };
@@ -100,6 +100,31 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
           </div>
         </InfoBlock>
 
+        {/* Alerts history */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="flex items-center gap-1.5 text-gray-400 text-xs font-medium">
+              <History className="w-3.5 h-3.5" /> سجل التنبيهات
+            </h3>
+            <span className="text-[10px] text-gray-600">{pilgrim.alertHistory.length} تنبيه</span>
+          </div>
+
+          {pilgrim.alertHistory.length === 0 ? (
+            <div className="bg-gray-950 rounded-xl border border-gray-800 px-4 py-5 text-center">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600 mx-auto mb-1.5" strokeWidth={1.5} />
+              <p className="text-gray-500 text-xs">لا توجد تنبيهات سابقة لهذا الحاج</p>
+            </div>
+          ) : (
+            <ol className="relative space-y-3 pr-4">
+              {/* timeline rail */}
+              <span className="absolute top-1 bottom-1 right-[5px] w-px bg-gray-800" aria-hidden />
+              {pilgrim.alertHistory.map(entry => (
+                <AlertRow key={entry.id} entry={entry} />
+              ))}
+            </ol>
+          )}
+        </section>
+
         {/* Actions */}
         <div className="flex gap-3 pt-1">
           <button className="flex-1 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5">
@@ -111,6 +136,50 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
         </div>
       </div>
     </div>
+  );
+}
+
+function AlertRow({ entry }: { entry: AlertHistoryEntry }) {
+  const color = RISK_COLORS[entry.riskLevel];
+  return (
+    <li className="relative pr-5">
+      {/* node */}
+      <span
+        className="absolute right-0 top-1.5 w-2.5 h-2.5 rounded-full border-2 border-gray-950"
+        style={{ background: color }}
+      />
+      <div className="bg-gray-950 rounded-xl border border-gray-800 p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center gap-2">
+            <span
+              className="text-[9px] px-1.5 py-0.5 rounded border font-semibold"
+              style={{ color, borderColor: color }}
+            >
+              {RISK_LABEL[entry.riskLevel]}
+            </span>
+            <span className="text-white text-xs font-medium">{entry.condition}</span>
+          </div>
+          <span className="text-[10px] text-gray-500">{entry.timeLabel}</span>
+        </div>
+
+        {/* vitals snapshot */}
+        <div className="flex items-center gap-2 text-[10px] text-gray-500 mb-2">
+          <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" /> {entry.heartRate}</span>
+          <span>·</span>
+          <span>{entry.temperature}°م</span>
+          <span>·</span>
+          <span>O₂ {entry.oxygenLevel}%</span>
+          <span>·</span>
+          <span>{entry.dateLabel}</span>
+        </div>
+
+        {/* resolution */}
+        <div className={`flex items-center gap-1.5 text-[10px] ${entry.resolved ? "text-emerald-400" : "text-yellow-400"}`}>
+          {entry.resolved ? <CheckCircle2 className="w-3 h-3" /> : <CircleDot className="w-3 h-3" />}
+          {entry.resolution}{entry.resolved ? " · تم الحل" : " · قيد المتابعة"}
+        </div>
+      </div>
+    </li>
   );
 }
 
