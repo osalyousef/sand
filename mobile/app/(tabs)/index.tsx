@@ -7,7 +7,8 @@ import {
   I18nManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bell, Thermometer, Droplets, Users, TrendingUp, X, ChevronLeft } from "lucide-react-native";
+import { Bell, Thermometer, Droplets, Users, TrendingUp, X, ChevronLeft, Repeat } from "lucide-react-native";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import type { RiskLevel } from "@/types";
 import { RISK_COLORS } from "@/types";
@@ -149,14 +150,22 @@ function CaseCard({ item }: { item: CriticalCase }) {
 // ─── screen ────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
+  const router = useRouter();
   const [alertVisible, setAlertVisible] = useState(true);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       {/* header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerAvatar}>
+        <TouchableOpacity
+          style={styles.headerAvatar}
+          activeOpacity={0.7}
+          onPress={() => router.push("/pilgrim")}
+        >
           <Text style={styles.headerAvatarText}>م.ص</Text>
+          <View style={styles.headerAvatarBadge}>
+            <Repeat color="#0d0d0d" size={9} strokeWidth={2.6} />
+          </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>سند</Text>
         <Bell color="#9ca3af" size={22} />
@@ -232,6 +241,19 @@ const styles = StyleSheet.create({
     color: "#9ca3af",
     fontSize: 12,
     fontWeight: "600",
+  },
+  headerAvatarBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#f97316",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#0d0d0d",
   },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },

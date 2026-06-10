@@ -1,5 +1,10 @@
 import type { ScannedPilgrim } from "@/lib/scanned-store";
 import type { RiskLevel } from "@/types";
+import {
+  fetchRemotePilgrim,
+  parseMedications,
+  deriveConditionFlags,
+} from "@/lib/health-platform";
 
 interface RegistryEntry {
   id: string;
@@ -88,8 +93,8 @@ const REGISTRY: Record<string, RegistryEntry> = {
   },
 };
 
-export function lookupPilgrim(rawPayload: string): ScannedPilgrim | null {
-  // Accept either raw ID or { "id": "..." } JSON.
+// Accept either a raw ID or a { "id": "..." } JSON QR payload.
+function parsePayloadId(rawPayload: string): string {
   let id = rawPayload.trim();
   try {
     const parsed = JSON.parse(rawPayload);
@@ -97,7 +102,11 @@ export function lookupPilgrim(rawPayload: string): ScannedPilgrim | null {
   } catch {
     // not JSON — treat as raw ID
   }
+  return id;
+}
 
+export function lookupPilgrim(rawPayload: string): ScannedPilgrim | null {
+  const id = parsePayloadId(rawPayload);
   const e = REGISTRY[id];
   if (!e) return null;
 
@@ -129,6 +138,78 @@ export function lookupPilgrim(rawPayload: string): ScannedPilgrim | null {
       risk_level: e.risk,
       score: e.score,
       assessed_at: now,
+    },
+    scannedAt: now,
+  };
+}
+
+/**
+ * Resolve a scanned QR payload into a full record.
+ *
+ * Vitals + risk come from the local (bracelet-simulated) registry; the medical
+ * history (name, nationality, conditions, medications) is overlaid from the
+ * Hajj Health Platform when it has a record for this id. Falls back to the
+ * local registry alone when the platform is unconfigured/unreachable, so the
+ * scan flow never breaks.
+ */
+export async function resolveScannedPilgrim(
+  rawPayload: string,
+): Promise<ScannedPilgrim | null> {
+  const id = parsePayloadId(rawPayload);
+  const local = lookupPilgrim(rawPayload);
+  const remote = await fetchRemotePilgrim(id);
+
+  if (!remote) return local; // platform offline/unknown → local only (may be null)
+
+  const now = new Date().toISOString();
+  const hp = remote.health_profile;
+
+  // Base on the local record when we have one (keeps real vitals + risk),
+  // otherwise synthesize a minimal shell with unknown vitals/risk.
+  const base: ScannedPilgrim = local ?? {
+    pilgrim: {
+      id,
+      full_name: remote.full_name,
+      age: 0,
+      nationality: remote.nationality || null,
+      passport_number: remote.passport_number || null,
+      has_diabetes: false,
+      has_heart_condition: false,
+      has_hypertension: false,
+      medications: null,
+      created_at: now,
+    },
+    vitals: {
+      id: `v-${id}`,
+      pilgrim_id: id,
+      heart_rate: null,
+      temperature: null,
+      oxygen_level: null,
+      recorded_at: now,
+    },
+    risk: {
+      id: `r-${id}`,
+      pilgrim_id: id,
+      risk_level: "green",
+      score: 0,
+      assessed_at: now,
+    },
+    scannedAt: now,
+  };
+
+  return {
+    ...base,
+    pilgrim: {
+      ...base.pilgrim,
+      full_name: remote.full_name || base.pilgrim.full_name,
+      nationality: remote.nationality || base.pilgrim.nationality,
+      passport_number: remote.passport_number || base.pilgrim.passport_number,
+      ...(hp
+        ? {
+            ...deriveConditionFlags(hp.diseases),
+            medications: parseMedications(hp.medications),
+          }
+        : {}),
     },
     scannedAt: now,
   };
