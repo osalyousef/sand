@@ -1,0 +1,23 @@
+Hajj Health Card — Requirements
+================================
+
+Runtime requirements:
+- Node.js 18+ (includes npm)
+
+Project dependencies (installed via npm):
+- react ^18.3.1
+- react-dom ^18.3.1
+- qrcode.react ^4.2.0
+
+Dev dependencies:
+- vite ^6.0.5
+- @vitejs/plugin-react ^4.3.4
+- tailwindcss ^3.4.17
+- postcss ^8.4.49
+- autoprefixer ^10.4.20
+
+Setup:
+1. cd card
+2. npm install
+3. npm run dev      (starts dev server at http://localhost:5173)
+4. npm run build    (production build into dist/)
