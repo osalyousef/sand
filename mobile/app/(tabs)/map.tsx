@@ -5,9 +5,9 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MapView, { Marker, Circle } from "react-native-maps";
+import MapView, { Marker, Circle, Polygon } from "react-native-maps";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Flame, MapPin, ChevronLeft } from "lucide-react-native";
+import { Flame, MapPin, ChevronLeft, Thermometer } from "lucide-react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 import type { ScannedPilgrim } from "@/lib/scanned-store";
@@ -34,11 +34,130 @@ const RISK_LABELS: Record<RiskLevel, string> = {
   green: "منخفض",
 };
 
-const RISK_WEIGHT: Record<RiskLevel, number> = {
-  red: 3,
-  yellow: 2,
-  green: 1,
+// ─── thermal heat map (matches web dashboard: gridded density field) ─────────
+
+// Area of interest around Mina/Arafat — same box the web dashboard grids over.
+const HEAT_AREA = { latMin: 21.378, latMax: 21.432, lngMin: 39.815, lngMax: 39.898 };
+const HEAT_CENTER = {
+  latitude: (HEAT_AREA.latMin + HEAT_AREA.latMax) / 2,
+  longitude: (HEAT_AREA.lngMin + HEAT_AREA.lngMax) / 2,
+  latitudeDelta: INITIAL_REGION.latitudeDelta,
+  longitudeDelta: INITIAL_REGION.longitudeDelta,
 };
+
+const CELL_METERS = 100;
+const M_PER_DEG_LAT = 111_320;
+const M_PER_DEG_LNG = 111_320 * Math.cos((HEAT_CENTER.latitude * Math.PI) / 180);
+const CELL_LAT = CELL_METERS / M_PER_DEG_LAT;
+const CELL_LNG = CELL_METERS / M_PER_DEG_LNG;
+
+// Crowd hotspots inside the Mina box — the field is the sum of their gaussians.
+const HOTSPOTS: { lat: number; lng: number; w: number; sigma: number }[] = [
+  { lat: 21.4225, lng: 39.8262, w: 1.0, sigma: 300 }, // الحرم — أكثف موقع
+  { lat: 21.4230, lng: 39.8730, w: 1.0, sigma: 320 }, // الجمرات
+  { lat: 21.4120, lng: 39.8620, w: 0.85, sigma: 360 }, // مخيم منى
+  { lat: 21.4050, lng: 39.8780, w: 0.95, sigma: 300 }, // وسط منى
+  { lat: 21.3980, lng: 39.8850, w: 0.6, sigma: 280 }, // مستشفى ميداني
+  { lat: 21.4180, lng: 39.8820, w: 0.7, sigma: 260 },
+  { lat: 21.3930, lng: 39.8700, w: 0.55, sigma: 300 },
+  { lat: 21.4085, lng: 39.8905, w: 0.5, sigma: 240 },
+  { lat: 21.3860, lng: 39.8570, w: 0.45, sigma: 260 }, // البوابة الرئيسية
+];
+
+// Fixed demo temperature — drives the field's intensity (no cycling).
+const HEAT_TEMP = 43;
+const TEMP_MIN = 36;
+const TEMP_MAX = 46;
+// At 37°م the field reads dim; at 45°م it pushes to white-hot.
+function tempScale(temp: number): number {
+  const t = (temp - TEMP_MIN) / (TEMP_MAX - TEMP_MIN);
+  return 0.42 + 0.58 * Math.max(0, Math.min(1, t));
+}
+
+// Heat ramp: cool blue → teal → green → yellow → orange, red reserved for peaks.
+// Most of the field reads cool; only true hotspots push into orange/red.
+const HEAT_STOPS: { t: number; rgb: [number, number, number] }[] = [
+  { t: 0.0, rgb: [37, 99, 235] },   // blue — quiet
+  { t: 0.25, rgb: [14, 165, 233] }, // sky
+  { t: 0.45, rgb: [34, 197, 94] },  // green
+  { t: 0.65, rgb: [250, 204, 21] }, // yellow
+  { t: 0.85, rgb: [249, 115, 22] }, // orange
+  { t: 1.0, rgb: [220, 38, 38] },   // red — only the hottest cores
+];
+
+function rampRgb(t: number): [number, number, number] {
+  const x = Math.max(0, Math.min(1, t));
+  let lo = HEAT_STOPS[0];
+  let hi = HEAT_STOPS[HEAT_STOPS.length - 1];
+  for (let i = 0; i < HEAT_STOPS.length - 1; i++) {
+    if (x >= HEAT_STOPS[i].t && x <= HEAT_STOPS[i + 1].t) {
+      lo = HEAT_STOPS[i];
+      hi = HEAT_STOPS[i + 1];
+      break;
+    }
+  }
+  const span = hi.t - lo.t || 1;
+  const f = (x - lo.t) / span;
+  const c = (a: number, b: number) => Math.round(a + (b - a) * f);
+  return [c(lo.rgb[0], hi.rgb[0]), c(lo.rgb[1], hi.rgb[1]), c(lo.rgb[2], hi.rgb[2])];
+}
+
+// Solid swatch — legend + icon.
+function inferno(t: number): string {
+  const [r, g, b] = rampRgb(t);
+  return `rgb(${r},${g},${b})`;
+}
+
+// Map fill — faint at low density, capped below opaque so cores don't read as blasts.
+function heatFill(t: number): string {
+  const [r, g, b] = rampRgb(t);
+  const a = (0.12 + 0.5 * Math.max(0, Math.min(1, t))).toFixed(2);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+interface HeatCell {
+  coords: { latitude: number; longitude: number }[];
+  nt: number; // base intensity ∈ [0,1] at full temperature
+}
+
+// Bin the area into 100m cells; keep only cells warm enough to be visible.
+function buildHeatGrid(): HeatCell[] {
+  const rows = Math.ceil((HEAT_AREA.latMax - HEAT_AREA.latMin) / CELL_LAT);
+  const cols = Math.ceil((HEAT_AREA.lngMax - HEAT_AREA.lngMin) / CELL_LNG);
+  const raw: { coords: HeatCell["coords"]; d: number }[] = [];
+  let max = 0;
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const south = HEAT_AREA.latMin + r * CELL_LAT;
+      const west = HEAT_AREA.lngMin + c * CELL_LNG;
+      const clat = south + CELL_LAT / 2;
+      const clng = west + CELL_LNG / 2;
+
+      let d = 0;
+      for (const h of HOTSPOTS) {
+        const dLat = (clat - h.lat) * M_PER_DEG_LAT;
+        const dLng = (clng - h.lng) * M_PER_DEG_LNG;
+        const dist2 = dLat * dLat + dLng * dLng;
+        d += h.w * Math.exp(-dist2 / (2 * h.sigma * h.sigma));
+      }
+      if (d > max) max = d;
+      raw.push({
+        coords: [
+          { latitude: south, longitude: west },
+          { latitude: south + CELL_LAT, longitude: west },
+          { latitude: south + CELL_LAT, longitude: west + CELL_LNG },
+          { latitude: south, longitude: west + CELL_LNG },
+        ],
+        d,
+      });
+    }
+  }
+
+  return raw
+    .map((cell) => ({ coords: cell.coords, nt: cell.d / (max || 1) }))
+    .filter((cell) => cell.nt >= 0.04); // drop near-black background cells
+}
 
 // ─── types ─────────────────────────────────────────────────────────────────
 
@@ -156,6 +275,19 @@ export default function MapScreen() {
   const [mode, setMode] = useState<ViewMode>("pins");
   const mapRef = useRef<MapView>(null);
 
+  const temp = HEAT_TEMP;
+  const scale = tempScale(temp);
+
+  // Grid is geometry-only — computed once, recolored per temperature.
+  const heatCells = useMemo(() => buildHeatGrid(), []);
+
+  // Frame the Mina box when entering heat mode (matches the dashboard view).
+  useEffect(() => {
+    if (mode !== "heat") return;
+    setSelected(null);
+    mapRef.current?.animateToRegion(HEAT_CENTER, 500);
+  }, [mode]);
+
   useEffect(() => {
     if (!params.focus) return;
     const pin = PILGRIMS.find((p) => p.id === params.focus);
@@ -234,7 +366,7 @@ export default function MapScreen() {
         </Text>
       </View>
 
-      {/* site jump bar */}
+      {/* site jump bar — both modes */}
       <View style={styles.siteBar}>
         {SITES.map((s) => (
           <TouchableOpacity
@@ -248,29 +380,31 @@ export default function MapScreen() {
         ))}
       </View>
 
-      {/* filter bar */}
-      <View style={styles.filterBar}>
-        {(["red", "yellow", "green"] as RiskLevel[]).map((level) => (
-          <TouchableOpacity
-            key={level}
-            style={[
-              styles.chip,
-              filter === level && {
-                borderColor: RISK_COLORS[level],
-                backgroundColor: `${RISK_COLORS[level]}18`,
-              },
-            ]}
-            onPress={() => setFilter(filter === level ? "all" : level)}
-            activeOpacity={0.7}
-          >
-            <View style={[styles.chipDot, { backgroundColor: RISK_COLORS[level] }]} />
-            <Text style={styles.chipLabel}>{RISK_LABELS[level]}</Text>
-            <Text style={[styles.chipCount, { color: RISK_COLORS[level] }]}>
-              {counts[level]}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      {/* risk filter bar — pins mode only */}
+      {mode === "pins" && (
+        <View style={styles.filterBar}>
+          {(["red", "yellow", "green"] as RiskLevel[]).map((level) => (
+            <TouchableOpacity
+              key={level}
+              style={[
+                styles.chip,
+                filter === level && {
+                  borderColor: RISK_COLORS[level],
+                  backgroundColor: `${RISK_COLORS[level]}18`,
+                },
+              ]}
+              onPress={() => setFilter(filter === level ? "all" : level)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.chipDot, { backgroundColor: RISK_COLORS[level] }]} />
+              <Text style={styles.chipLabel}>{RISK_LABELS[level]}</Text>
+              <Text style={[styles.chipCount, { color: RISK_COLORS[level] }]}>
+                {counts[level]}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
 
       {/* map */}
       <MapView
@@ -304,33 +438,17 @@ export default function MapScreen() {
           })}
 
         {mode === "heat" &&
-          visible.flatMap((pin) => {
-            const color = RISK_COLORS[pin.risk];
-            const w = RISK_WEIGHT[pin.risk];
-            const base = 60 * w;
-            return [
-              <Circle
-                key={`${pin.id}-outer`}
-                center={{ latitude: pin.lat, longitude: pin.lng }}
-                radius={base * 2.2}
+          heatCells.map((cell, i) => {
+            const t = cell.nt * scale;
+            return (
+              <Polygon
+                key={i}
+                coordinates={cell.coords}
+                strokeWidth={0}
                 strokeColor="transparent"
-                fillColor={`${color}10`}
-              />,
-              <Circle
-                key={`${pin.id}-mid`}
-                center={{ latitude: pin.lat, longitude: pin.lng }}
-                radius={base * 1.3}
-                strokeColor="transparent"
-                fillColor={`${color}22`}
-              />,
-              <Circle
-                key={`${pin.id}-core`}
-                center={{ latitude: pin.lat, longitude: pin.lng }}
-                radius={base * 0.6}
-                strokeColor="transparent"
-                fillColor={`${color}55`}
-              />,
-            ];
+                fillColor={heatFill(t)}
+              />
+            );
           })}
 
         {mode === "pins" && selected && (
@@ -344,8 +462,17 @@ export default function MapScreen() {
         )}
       </MapView>
 
-      {/* callout */}
-      {selected && (
+      {/* temperature badge — heat mode */}
+      {mode === "heat" && (
+        <View style={styles.tempBadge}>
+          <Thermometer color={inferno(scale)} size={18} />
+          <Text style={styles.tempValue}>{temp}°م</Text>
+          <Text style={styles.tempCaption}>مؤشر الحرارة · منى</Text>
+        </View>
+      )}
+
+      {/* callout — pins mode */}
+      {mode === "pins" && selected && (
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={() => openDetail(selected)}
@@ -371,14 +498,26 @@ export default function MapScreen() {
       )}
 
       {/* legend */}
-      <View style={styles.legend}>
-        {(["red", "yellow", "green"] as RiskLevel[]).map((level) => (
-          <View key={level} style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: RISK_COLORS[level] }]} />
-            <Text style={styles.legendText}>{RISK_LABELS[level]}</Text>
+      {mode === "pins" ? (
+        <View style={styles.legend}>
+          {(["red", "yellow", "green"] as RiskLevel[]).map((level) => (
+            <View key={level} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: RISK_COLORS[level] }]} />
+              <Text style={styles.legendText}>{RISK_LABELS[level]}</Text>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.legend}>
+          <Text style={styles.legendText}>أقل ازدحام</Text>
+          <View style={styles.ramp}>
+            {[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => (
+              <View key={t} style={[styles.rampCell, { backgroundColor: inferno(t) }]} />
+            ))}
           </View>
-        ))}
-      </View>
+          <Text style={styles.legendText}>الأشد</Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -513,4 +652,24 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { color: "#e5e7eb", fontSize: 12, fontWeight: "600" },
+
+  ramp: { flexDirection: "row", borderRadius: 3, overflow: "hidden" },
+  rampCell: { width: 22, height: 10 },
+
+  tempBadge: {
+    position: "absolute",
+    top: 70,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "rgba(13,13,13,0.85)",
+    borderWidth: 1,
+    borderColor: "#262626",
+  },
+  tempValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  tempCaption: { color: "#9ca3af", fontSize: 11, fontWeight: "600", marginRight: 2 },
 });
