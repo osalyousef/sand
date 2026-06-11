@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   I18nManager,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -16,7 +17,12 @@ import {
   Check,
   Repeat,
   Droplet,
+  QrCode,
+  X,
+  Maximize2,
 } from "lucide-react-native";
+import QRCode from "react-native-qrcode-svg";
+import { RISK_COLORS, type RiskLevel } from "@/types";
 
 I18nManager.forceRTL(true);
 
@@ -56,6 +62,27 @@ const INITIAL_MEDS: Med[] = [
   { time: "٢٠:٠٠", name: "ليسينوبريل 10mg", status: "upcoming" },
 ];
 
+// The signed-in pilgrim. Matches a bracelet record so the medical team's
+// scanner resolves this exact QR to the full health profile.
+const ME = {
+  id: "SA-2024-EG-04412",
+  initials: "م.إ",
+  name: "محمد إبراهيم الفارسي",
+  age: 68,
+  nationality: "مصر",
+  risk: "red" as RiskLevel,
+  conditions: ["قصور في القلب", "ارتفاع ضغط الدم"],
+};
+
+// QR carries just the ID, exactly the shape the scanner's parsePayloadId reads.
+const QR_PAYLOAD = JSON.stringify({ id: ME.id });
+
+const RISK_LABEL: Record<RiskLevel, string> = {
+  red: "مرتفع",
+  yellow: "متوسط",
+  green: "منخفض",
+};
+
 // ─── components ────────────────────────────────────────────────────────────
 
 function Hotline({ onCall }: { onCall: () => void }) {
@@ -86,6 +113,106 @@ function Hotline({ onCall }: { onCall: () => void }) {
         <Text style={styles.actionLabel}>دردشة</Text>
       </TouchableOpacity>
     </View>
+  );
+}
+
+function HealthCard() {
+  const [open, setOpen] = useState(false);
+  const risk = RISK_COLORS[ME.risk];
+
+  return (
+    <>
+      <TouchableOpacity
+        style={[styles.idCard, { borderColor: `${risk}55` }]}
+        activeOpacity={0.85}
+        onPress={() => setOpen(true)}
+      >
+        <View style={[styles.idAccent, { backgroundColor: risk }]} />
+
+        <View style={styles.idTopRow}>
+          <View style={styles.idInitials}>
+            <Text style={styles.idInitialsText}>{ME.initials}</Text>
+          </View>
+          <View style={styles.idNameWrap}>
+            <Text style={styles.idCardLabel}>بطاقتي الصحية</Text>
+            <Text style={styles.idName}>{ME.name}</Text>
+            <Text style={styles.idMeta}>
+              {ME.age} سنة · {ME.nationality}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.riskBadge,
+              { borderColor: risk, backgroundColor: `${risk}1A` },
+            ]}
+          >
+            <Text style={[styles.riskBadgeText, { color: risk }]}>
+              {RISK_LABEL[ME.risk]}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.idDivider} />
+
+        <View style={styles.idBottomRow}>
+          <View style={styles.idQrThumb}>
+            <QRCode value={QR_PAYLOAD} size={52} backgroundColor="#ffffff" color="#0d0d0d" />
+          </View>
+          <View style={styles.idBottomText}>
+            <Text style={styles.idCode}>{ME.id}</Text>
+            <View style={styles.idHintRow}>
+              <Maximize2 color={SN.fg3} size={12} strokeWidth={2} />
+              <Text style={styles.idCardHint}>اضغط لعرض الرمز للفريق الطبي</Text>
+            </View>
+          </View>
+          <QrCode color={SN.fg3} size={20} strokeWidth={1.6} />
+        </View>
+      </TouchableOpacity>
+
+      <Modal
+        visible={open}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setOpen(false)}
+        statusBarTranslucent
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.qrSheet}>
+            <TouchableOpacity
+              style={styles.qrClose}
+              onPress={() => setOpen(false)}
+              hitSlop={12}
+              activeOpacity={0.7}
+            >
+              <X color={SN.fg2} size={22} />
+            </TouchableOpacity>
+
+            <Text style={styles.qrSheetLabel}>بطاقتي الصحية</Text>
+            <Text style={styles.qrSheetName}>{ME.name}</Text>
+
+            <View style={styles.qrBig}>
+              <QRCode value={QR_PAYLOAD} size={236} backgroundColor="#ffffff" color="#0d0d0d" />
+            </View>
+
+            <View
+              style={[
+                styles.riskBadge,
+                { borderColor: risk, backgroundColor: `${risk}1A`, marginTop: 2 },
+              ]}
+            >
+              <Text style={[styles.riskBadgeText, { color: risk }]}>
+                مستوى الخطورة: {RISK_LABEL[ME.risk]}
+              </Text>
+            </View>
+
+            <Text style={styles.qrSheetHint}>
+              اعرض هذا الرمز للفريق الطبي للوصول الفوري لملفك الصحي الكامل
+            </Text>
+            <Text style={styles.qrSheetCode}>{ME.id}</Text>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -135,6 +262,9 @@ export default function PilgrimHome() {
           <Text style={styles.greetingEyebrow}>السلام عليكم</Text>
           <Text style={styles.greetingName}>محمد، تقبّل الله حجّك</Text>
         </View>
+
+        {/* health card + QR */}
+        <HealthCard />
 
         {/* hotline — primary */}
         <Hotline onCall={() => router.push("/call")} />
@@ -279,6 +409,132 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   greetingName: { fontSize: 19, fontWeight: "700", color: SN.fg1, lineHeight: 24 },
+
+  // ─── health card + QR ──────────────────────────────────────────────────
+  idCard: {
+    marginHorizontal: 18,
+    marginBottom: 16,
+    backgroundColor: SN.bgRaised,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    overflow: "hidden",
+  },
+  idAccent: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    right: 0,
+    width: 4,
+  },
+  idTopRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  idInitials: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: SN.graphite2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  idInitialsText: { color: SN.fg1, fontSize: 14, fontWeight: "700" },
+  idNameWrap: { flex: 1, alignItems: "flex-end" },
+  idCardLabel: {
+    color: SN.gold,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  idName: {
+    color: SN.fg1,
+    fontSize: 16,
+    fontWeight: "700",
+    textAlign: "right",
+    marginTop: 2,
+  },
+  idMeta: { color: SN.fg3, fontSize: 12, marginTop: 2, textAlign: "right" },
+  riskBadge: {
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  riskBadgeText: { fontSize: 12, fontWeight: "800" },
+  idDivider: { height: 1, backgroundColor: SN.rule, marginVertical: 13 },
+  idBottomRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  idQrThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  idBottomText: { flex: 1, alignItems: "flex-end" },
+  idCode: {
+    color: SN.fg2,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  idHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 4,
+  },
+  idCardHint: { color: SN.fg3, fontSize: 11 },
+
+  // ─── QR fullscreen modal ───────────────────────────────────────────────
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.82)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 28,
+  },
+  qrSheet: {
+    width: "100%",
+    backgroundColor: SN.bgRaised,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: SN.rule,
+    paddingTop: 26,
+    paddingBottom: 24,
+    paddingHorizontal: 22,
+    alignItems: "center",
+  },
+  qrClose: { position: "absolute", top: 14, right: 14, padding: 4, zIndex: 2 },
+  qrSheetLabel: { color: SN.gold, fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
+  qrSheetName: {
+    color: SN.fg1,
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 4,
+    marginBottom: 18,
+    textAlign: "center",
+  },
+  qrBig: {
+    padding: 16,
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  qrSheetHint: {
+    color: SN.fg2,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: "center",
+    marginTop: 14,
+    paddingHorizontal: 6,
+  },
+  qrSheetCode: {
+    color: SN.fg3,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginTop: 10,
+  },
 
   // hotline
   hotline: {

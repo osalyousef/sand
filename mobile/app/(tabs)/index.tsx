@@ -24,13 +24,6 @@ const ENV = {
   season: "ذروة الموسم",
 };
 
-const STATS: { label: string; value: string; level: RiskLevel | "low" }[] = [
-  { label: "منخفض", value: "18.4k", level: "low" },
-  { label: "متوسط", value: "2.3k", level: "yellow" },
-  { label: "عالٍ", value: "847", level: "yellow" },
-  { label: "حرج", value: "124", level: "red" },
-];
-
 interface CriticalCase {
   id: string;
   name: string;
@@ -77,25 +70,6 @@ function AlertBanner({ onDismiss }: { onDismiss: () => void }) {
           °44م · رطوبة 62% · 72 حالة في خطر فوري
         </Text>
       </View>
-    </View>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  level,
-}: {
-  label: string;
-  value: string;
-  level: RiskLevel | "low";
-}) {
-  const color =
-    level === "low" ? "#9ca3af" : RISK_COLORS[level as RiskLevel];
-  return (
-    <View style={styles.statCard}>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
@@ -179,13 +153,6 @@ export default function Dashboard() {
         {alertVisible && (
           <AlertBanner onDismiss={() => setAlertVisible(false)} />
         )}
-
-        {/* stats */}
-        <View style={styles.statsRow}>
-          {STATS.map((s) => (
-            <StatCard key={s.label} {...s} />
-          ))}
-        </View>
 
         <EnvRow />
 
@@ -277,25 +244,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   alertSub: { color: "#fdba74", fontSize: 12, marginTop: 2, textAlign: "right" },
-
-  // stats
-  statsRow: {
-    flexDirection: "row",
-    paddingHorizontal: 12,
-    gap: 8,
-    marginTop: 4,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#111",
-    borderRadius: 10,
-    padding: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1f2937",
-  },
-  statValue: { fontSize: 18, fontWeight: "800" },
-  statLabel: { color: "#6b7280", fontSize: 11, marginTop: 2 },
 
   // env
   envRow: {

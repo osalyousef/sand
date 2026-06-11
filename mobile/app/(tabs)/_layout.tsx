@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Home, Users, Map, ScanQrCode, Phone } from "lucide-react-native";
+import { Home, Users, Map, ScanQrCode, Siren } from "lucide-react-native";
 
 const ACTIVE = "#f97316";
 const INACTIVE = "#6b7280";
@@ -60,8 +60,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="support"
         options={{
-          title: "الدعم",
-          tabBarIcon: ({ color, size }) => <Phone color={color} size={size} />,
+          title: "البلاغات",
+          tabBarIcon: ({ color, size }) => <Siren color={color} size={size} />,
         }}
       />
     </Tabs>
