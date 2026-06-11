@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { Camera, Zap, RefreshCw } from "lucide-react-native";
 import {
-  lookupPilgrim,
+  resolveScannedPilgrim,
   randomRegistryId,
 } from "@/lib/pilgrim-registry";
 
@@ -23,17 +23,16 @@ export default function Scan() {
   const cooldown = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePayload = useCallback(
-    (raw: string) => {
+    async (raw: string) => {
       if (scanned) return;
-      const entry = lookupPilgrim(raw);
+      setScanned(true);
+      const entry = await resolveScannedPilgrim(raw);
       if (!entry) {
         Alert.alert("رمز غير معروف", `لم يتم العثور على حاج بالمعرف:\n${raw}`, [
           { text: "حسنًا", onPress: () => setScanned(false) },
         ]);
-        setScanned(true);
         return;
       }
-      setScanned(true);
       router.push({
         pathname: "/pilgrim/[id]",
         params: { id: entry.pilgrim.id, data: JSON.stringify(entry) },
