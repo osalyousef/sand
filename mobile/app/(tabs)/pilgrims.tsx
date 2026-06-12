@@ -125,7 +125,7 @@ function riskLabel(level: RiskLevel) {
 function EmptyState() {
   return (
     <View style={styles.emptyContainer}>
-      <ScanQrCode color="#374151" size={64} strokeWidth={1.5} />
+      <ScanQrCode color="#cbbfa8" size={64} strokeWidth={1.5} />
       <Text style={styles.emptyTitle}>لا يوجد حجاج بعد</Text>
       <Text style={styles.emptySubtitle}>
         افتح تبويب المسح وامسح بطاقة الحاج لإضافته هنا
@@ -158,7 +158,7 @@ function PilgrimRow({ item }: { item: ScannedPilgrim }) {
         </Text>
         <View style={styles.rowBottom}>
           <View style={styles.rowTime}>
-            <Clock color="#6b7280" size={11} />
+            <Clock color="#9a917f" size={11} />
             <Text style={styles.rowTimeText}>{timeAgo(item.scannedAt)}</Text>
           </View>
           <Text style={[styles.rowBadge, { color }]}>
@@ -166,7 +166,7 @@ function PilgrimRow({ item }: { item: ScannedPilgrim }) {
           </Text>
         </View>
       </View>
-      <ChevronLeft color="#374151" size={18} />
+      <ChevronLeft color="#cbbfa8" size={18} />
     </TouchableOpacity>
   );
 }
@@ -198,7 +198,6 @@ export default function Pilgrims() {
           renderItem={({ item }) => <PilgrimRow item={item} />}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}
     </SafeAreaView>
@@ -208,7 +207,7 @@ export default function Pilgrims() {
 // ─── styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0d0d0d" },
+  safe: { flex: 1, backgroundColor: "#f7f0e1" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -216,25 +215,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
-  headerTitle: { color: "#fff", fontSize: 20, fontWeight: "700" },
-  headerCount: { color: "#6b7280", fontSize: 13 },
+  headerTitle: { color: "#3d3424", fontSize: 20, fontWeight: "700" },
+  headerCount: { color: "#9a917f", fontSize: 13 },
 
-  listContent: { paddingVertical: 8 },
-  separator: { height: 1, backgroundColor: "#1a1a1a", marginHorizontal: 16 },
+  listContent: { paddingVertical: 12 },
 
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 14,
     gap: 12,
+    backgroundColor: "#fdf8ec",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e6dcc8",
+    marginHorizontal: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   rowIndicator: { width: 4, height: 44, borderRadius: 2 },
   rowContent: { flex: 1, alignItems: "flex-end", gap: 3 },
-  rowName: { color: "#fff", fontSize: 15, fontWeight: "700", textAlign: "right" },
-  rowMeta: { color: "#6b7280", fontSize: 12, textAlign: "right" },
+  rowName: { color: "#3d3424", fontSize: 15, fontWeight: "700", textAlign: "right" },
+  rowMeta: { color: "#9a917f", fontSize: 12, textAlign: "right" },
   rowBottom: {
     flexDirection: "row",
     alignItems: "center",
@@ -242,7 +251,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   rowTime: { flexDirection: "row", alignItems: "center", gap: 4 },
-  rowTimeText: { color: "#6b7280", fontSize: 11 },
+  rowTimeText: { color: "#9a917f", fontSize: 11 },
   rowBadge: { fontSize: 12, fontWeight: "700" },
 
   emptyContainer: {
@@ -252,9 +261,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 40,
   },
-  emptyTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  emptyTitle: { color: "#3d3424", fontSize: 18, fontWeight: "700" },
   emptySubtitle: {
-    color: "#6b7280",
+    color: "#9a917f",
     fontSize: 14,
     textAlign: "center",
     lineHeight: 22,

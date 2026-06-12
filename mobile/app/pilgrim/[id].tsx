@@ -53,7 +53,7 @@ export default function PilgrimDetail() {
       {/* header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <ChevronRight color="#fff" size={22} />
+          <ChevronRight color="#3d3424" size={22} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>بطاقة الحاج</Text>
         <View style={styles.scanIndicator}>
@@ -146,11 +146,11 @@ export default function PilgrimDetail() {
             router.push({ pathname: "/(tabs)/map", params: { focus: pilgrim.id } })
           }
         >
-          <MapPin color="#fff" size={18} />
+          <MapPin color="#3d3424" size={18} />
           <Text style={styles.locationText}>موقع على الخريطة</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85}>
-          <Phone color="#fff" size={18} />
+          <Phone color="#3d3424" size={18} />
           <Text style={styles.ctaText}>اتصال طارئ — الفريق الطبي</Text>
         </TouchableOpacity>
       </View>
@@ -159,7 +159,7 @@ export default function PilgrimDetail() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0d0d0d" },
+  safe: { flex: 1, backgroundColor: "#f7f0e1" },
 
   header: {
     flexDirection: "row",
@@ -168,10 +168,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
   backBtn: { padding: 4 },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  headerTitle: { color: "#3d3424", fontSize: 18, fontWeight: "700" },
   scanIndicator: { flexDirection: "row", alignItems: "center", gap: 6 },
   scanDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22c55e" },
   scanText: { color: "#22c55e", fontSize: 12 },
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
 
   // identity
   identityCard: {
-    backgroundColor: "#111",
+    backgroundColor: "#fdf8ec",
     borderRadius: 12,
     borderWidth: 1.5,
     padding: 16,
@@ -203,9 +203,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   riskBadgeText: { fontSize: 13, fontWeight: "700" },
-  riskCritical: { color: "#6b7280", fontSize: 11, letterSpacing: 1 },
-  name: { color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "right" },
-  meta: { color: "#6b7280", fontSize: 13, textAlign: "right" },
+  riskCritical: { color: "#9a917f", fontSize: 11, letterSpacing: 1 },
+  name: { color: "#3d3424", fontSize: 22, fontWeight: "800", textAlign: "right" },
+  meta: { color: "#9a917f", fontSize: 13, textAlign: "right" },
 
   vitalsRow: {
     flexDirection: "row",
@@ -214,27 +214,27 @@ const styles = StyleSheet.create({
   },
   vitalBox: {
     flex: 1,
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     borderRadius: 8,
     padding: 10,
     alignItems: "center",
     gap: 4,
   },
-  vitalValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  vitalValue: { color: "#3d3424", fontSize: 18, fontWeight: "800" },
   vitalHighlight: { color: "#f97316" },
-  vitalLabel: { color: "#6b7280", fontSize: 11 },
+  vitalLabel: { color: "#9a917f", fontSize: 11 },
 
   // sections
   section: {
-    backgroundColor: "#111",
+    backgroundColor: "#fdf8ec",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: "#e6dcc8",
     padding: 16,
     gap: 10,
   },
   sectionTitle: {
-    color: "#fff",
+    color: "#3d3424",
     fontSize: 15,
     fontWeight: "700",
     textAlign: "right",
@@ -246,12 +246,12 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     gap: 10,
   },
-  listItemText: { color: "#d1d5db", fontSize: 14, textAlign: "right" },
+  listItemText: { color: "#2f2a22", fontSize: 14, textAlign: "right" },
   bullet: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#374151",
+    backgroundColor: "#cbbfa8",
   },
 
   // cta
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: "#1a1a1a",
+    borderTopColor: "#e6dcc8",
     gap: 10,
   },
   ctaButton: {
@@ -271,11 +271,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  ctaText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  ctaText: { color: "#3d3424", fontSize: 16, fontWeight: "700" },
   locationButton: {
-    backgroundColor: "#1f2937",
+    backgroundColor: "#e6dcc8",
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: "#cbbfa8",
     borderRadius: 12,
     paddingVertical: 14,
     flexDirection: "row",
@@ -283,5 +283,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 10,
   },
-  locationText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  locationText: { color: "#3d3424", fontSize: 15, fontWeight: "700" },
 });

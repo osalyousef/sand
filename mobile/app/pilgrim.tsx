@@ -16,36 +16,42 @@ import {
   MessageSquare,
   Check,
   Repeat,
-  Droplet,
-  QrCode,
   X,
   Maximize2,
+  ChevronLeft,
+  MapPin,
+  PlusCircle,
+  Sun,
 } from "lucide-react-native";
 import QRCode from "react-native-qrcode-svg";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 
 I18nManager.forceRTL(true);
 
-// ─── design tokens (Sannad — neo-kinpaku, oklch → hex) ─────────────────────
+// ─── design tokens (Sannad — neo-kinpaku, warm-paper / Nusuk light) ─────────
 const SN = {
-  bg: "#0f0f0d",
-  bgDeep: "#090908",
-  bgRaised: "#171715",
-  graphite: "#1f1f1b",
-  graphite2: "#2a2a24",
-  gold: "#eca31c",
-  goldDeep: "#9c7c44",
-  teal: "#34afa4",
-  red: "#c0563e",
-  fg1: "#e6e6e6",
-  fg: "#dcdcdc",
-  fg2: "#b0b0b0",
-  fg3: "#949494",
-  rule: "rgba(200,200,200,0.16)",
-  ruleG: "rgba(190,160,90,0.45)",
-  redFill: "rgba(192,86,62,0.08)",
-  redRule: "rgba(192,86,62,0.25)",
-  goldFill: "rgba(236,163,28,0.07)",
+  bg: "#f7f0e1",
+  bgDeep: "#f1ead9",
+  bgRaised: "#fdf8ec",
+  graphite: "#e6dcc8",
+  graphite2: "#d8ccb2",
+  gold: "#b07d12",
+  goldDeep: "#8a6a2e",
+  goldInk: "#3a2c08", // dark ink for text on gold fills
+  teal: "#1f8a80",
+  red: "#b5432b",
+  fg1: "#3d3424",
+  fg: "#2a2620",
+  fg2: "#6b6457",
+  fg3: "#9a917f",
+  rule: "rgba(60,50,30,0.14)",
+  ruleG: "rgba(176,125,18,0.45)",
+  redFill: "rgba(181,67,43,0.08)",
+  redRule: "rgba(181,67,43,0.28)",
+  goldFill: "rgba(176,125,18,0.10)",
+  goldSoft: "rgba(176,125,18,0.08)",
+  tealFill: "rgba(31,138,128,0.12)",
+  tealRule: "rgba(31,138,128,0.30)",
 };
 
 // ─── mock data (replace with Supabase queries later) ───────────────────────
@@ -53,13 +59,22 @@ type MedStatus = "taken" | "now" | "upcoming";
 interface Med {
   time: string;
   name: string;
+  dose: string;
   status: MedStatus;
 }
 
 const INITIAL_MEDS: Med[] = [
-  { time: "٠٨:٠٠", name: "ميتفورمين 1000mg", status: "taken" },
-  { time: "١٤:٠٠", name: "ميتوبرولول 50mg", status: "now" },
-  { time: "٢٠:٠٠", name: "ليسينوبريل 10mg", status: "upcoming" },
+  { time: "٠٨:٠٠", name: "ميتفورمين", dose: "1000mg", status: "taken" },
+  { time: "١٤:٠٠", name: "ميتوبرولول", dose: "50mg", status: "now" },
+  { time: "٢٠:٠٠", name: "ليسينوبريل", dose: "10mg", status: "upcoming" },
+];
+
+const HYDRATION = { drunk: 6, goal: 9 };
+
+const VITALS = [
+  { label: "النبض", value: "72", unit: "bpm" },
+  { label: "الضغط", value: "128/82", unit: "mmHg" },
+  { label: "الحرارة", value: "37.0", unit: "°م" },
 ];
 
 // The signed-in pilgrim. Matches a bracelet record so the medical team's
@@ -83,63 +98,146 @@ const RISK_LABEL: Record<RiskLevel, string> = {
   green: "منخفض",
 };
 
-// ─── components ────────────────────────────────────────────────────────────
+const TABS = [
+  { id: "today", ar: "اليوم" },
+  { id: "health", ar: "بطاقتي" },
+  { id: "help", ar: "الطوارئ" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
 
-function Hotline({ onCall }: { onCall: () => void }) {
+// ─── Tab: اليوم — Today ─────────────────────────────────────────────────────
+
+function TabToday({
+  meds,
+  onTake,
+}: {
+  meds: Med[];
+  onTake: (idx: number) => void;
+}) {
+  const taken = meds.filter((m) => m.status === "taken").length;
+  const [drunk, setDrunk] = useState(HYDRATION.drunk);
+
+  // tapping a dot sets the count to that level; tapping the current level steps back one
+  const setLevel = (i: number) => setDrunk((d) => (d === i + 1 ? i : i + 1));
+
   return (
-    <View style={styles.hotline}>
-      <View style={styles.hotlineTop}>
-        <View style={styles.hotlineInfo}>
-          <View style={styles.hotlineTag}>
-            <Text style={styles.hotlineTagText}>الخط الساخن</Text>
-            <View style={styles.hotlineDot} />
+    <ScrollView
+      style={styles.tabScroll}
+      contentContainerStyle={styles.tabContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* hydration */}
+      <View style={styles.card}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.hydroNumber}>
+            <Text style={styles.hydroDrunk}>{drunk}</Text>
+            <Text style={styles.hydroGoal}>/ {HYDRATION.goal}</Text>
           </View>
-          <Text style={styles.hotlineTitle}>طوارئ صحية للحجاج</Text>
-          <Text style={styles.hotlineSub}>مترجم فوري · متاح 24/7 · مجاني</Text>
+          <View style={styles.cardHeadText}>
+            <Text style={styles.cardTitle}>الترطيب</Text>
+            <Text style={styles.cardSub}>
+              {drunk >= HYDRATION.goal ? "أحسنت — بلغت هدف اليوم" : "ابقَ في الظل بعد العصر"}
+            </Text>
+          </View>
         </View>
-        <View style={styles.hotlineNumber}>
-          <Text style={styles.hotlineDigits}>937</Text>
-          <Text style={styles.hotlineCallLabel}>اتصل</Text>
+
+        <View style={styles.hydroBars}>
+          {Array.from({ length: HYDRATION.goal }, (_, i) => (
+            <TouchableOpacity
+              key={i}
+              activeOpacity={0.7}
+              onPress={() => setLevel(i)}
+              style={[
+                styles.hydroBar,
+                { backgroundColor: i < drunk ? SN.gold : SN.graphite2 },
+              ]}
+            />
+          ))}
         </View>
       </View>
 
-      <TouchableOpacity style={styles.callBtn} activeOpacity={0.85} onPress={onCall}>
-        <Phone color="#f7f7f5" size={19} fill="#f7f7f5" />
-        <Text style={styles.callBtnText}>اتصل الآن</Text>
-      </TouchableOpacity>
+      {/* medications */}
+      <View style={[styles.card, styles.cardFlush]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.medsCount}>
+            {taken}/{meds.length} تم
+          </Text>
+          <Text style={styles.cardTitle}>أدوية اليوم</Text>
+        </View>
 
-      <TouchableOpacity style={styles.chatAction} activeOpacity={0.7}>
-        <MessageSquare color={SN.red} size={17} strokeWidth={1.7} />
-        <Text style={styles.actionLabel}>دردشة</Text>
-      </TouchableOpacity>
-    </View>
+        {meds.map((m, i) => {
+          const isNow = m.status === "now";
+          const isTaken = m.status === "taken";
+          return (
+            <View
+              key={m.name}
+              style={[
+                styles.medRow,
+                i > 0 && styles.medDivider,
+                isNow && styles.medRowNow,
+              ]}
+            >
+              {isTaken && (
+                <View style={styles.medCheck}>
+                  <Check color={SN.teal} size={11} strokeWidth={2.6} />
+                </View>
+              )}
+              {isNow && (
+                <TouchableOpacity
+                  style={styles.medNowBtn}
+                  activeOpacity={0.8}
+                  onPress={() => onTake(i)}
+                >
+                  <Text style={styles.medNowBtnText}>أخذتها</Text>
+                </TouchableOpacity>
+              )}
+              {m.status === "upcoming" && (
+                <Text style={styles.medUpcoming}>قادم</Text>
+              )}
+              <View style={styles.medNameWrap}>
+                <Text style={[styles.medName, isTaken && styles.medNameTaken]}>
+                  {m.name}
+                </Text>
+                <Text style={styles.medDose}>{m.dose}</Text>
+              </View>
+              <Text style={[styles.medTime, isTaken && { color: SN.fg3 }]}>
+                {m.time}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* weather advisory */}
+      <View style={styles.advisory}>
+        <Text style={styles.advisoryText}>
+          الحرارة ٤٤°م — تجنّب الشمس بين ١١ و٣
+        </Text>
+        <Sun color={SN.fg3} size={15} strokeWidth={1.7} />
+      </View>
+    </ScrollView>
   );
 }
 
-function HealthCard() {
+// ─── Tab: صحتي — Health ─────────────────────────────────────────────────────
+
+function TabHealth() {
   const [open, setOpen] = useState(false);
   const risk = RISK_COLORS[ME.risk];
 
   return (
-    <>
+    <ScrollView
+      style={styles.tabScroll}
+      contentContainerStyle={styles.tabContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* identity + QR */}
       <TouchableOpacity
-        style={[styles.idCard, { borderColor: `${risk}55` }]}
+        style={styles.card}
         activeOpacity={0.85}
         onPress={() => setOpen(true)}
       >
-        <View style={[styles.idAccent, { backgroundColor: risk }]} />
-
         <View style={styles.idTopRow}>
-          <View style={styles.idInitials}>
-            <Text style={styles.idInitialsText}>{ME.initials}</Text>
-          </View>
-          <View style={styles.idNameWrap}>
-            <Text style={styles.idCardLabel}>بطاقتي الصحية</Text>
-            <Text style={styles.idName}>{ME.name}</Text>
-            <Text style={styles.idMeta}>
-              {ME.age} سنة · {ME.nationality}
-            </Text>
-          </View>
           <View
             style={[
               styles.riskBadge,
@@ -150,69 +248,191 @@ function HealthCard() {
               {RISK_LABEL[ME.risk]}
             </Text>
           </View>
+          <View style={styles.idNameWrap}>
+            <Text style={styles.idCardLabel}>بطاقتي الصحية</Text>
+            <Text style={styles.idName}>{ME.name}</Text>
+            <Text style={styles.idMeta}>
+              {ME.age} سنة · {ME.nationality}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.idDivider} />
 
         <View style={styles.idBottomRow}>
-          <View style={styles.idQrThumb}>
-            <QRCode value={QR_PAYLOAD} size={52} backgroundColor="#ffffff" color="#0d0d0d" />
-          </View>
+          <ChevronLeft color={SN.fg3} size={16} strokeWidth={1.8} />
           <View style={styles.idBottomText}>
             <Text style={styles.idCode}>{ME.id}</Text>
             <View style={styles.idHintRow}>
-              <Maximize2 color={SN.fg3} size={12} strokeWidth={2} />
-              <Text style={styles.idCardHint}>اضغط لعرض الرمز للفريق الطبي</Text>
+              <Maximize2 color={SN.fg3} size={11} strokeWidth={2} />
+              <Text style={styles.idCardHint}>اعرضه للفريق الطبي للوصول لملفك</Text>
             </View>
           </View>
-          <QrCode color={SN.fg3} size={20} strokeWidth={1.6} />
+          <View style={styles.idQrThumb}>
+            <QRCode value={QR_PAYLOAD} size={52} backgroundColor="#ffffff" color="#0d0d0d" />
+          </View>
         </View>
       </TouchableOpacity>
 
-      <Modal
-        visible={open}
-        animationType="fade"
-        transparent
-        onRequestClose={() => setOpen(false)}
-        statusBarTranslucent
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.qrSheet}>
-            <TouchableOpacity
-              style={styles.qrClose}
-              onPress={() => setOpen(false)}
-              hitSlop={12}
-              activeOpacity={0.7}
-            >
-              <X color={SN.fg2} size={22} />
-            </TouchableOpacity>
-
-            <Text style={styles.qrSheetLabel}>بطاقتي الصحية</Text>
-            <Text style={styles.qrSheetName}>{ME.name}</Text>
-
-            <View style={styles.qrBig}>
-              <QRCode value={QR_PAYLOAD} size={236} backgroundColor="#ffffff" color="#0d0d0d" />
+      {/* vitals */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.vitalsTime}>قبل ساعتين</Text>
+          <Text style={styles.cardTitle}>العلامات الحيوية</Text>
+        </View>
+        <View style={styles.vitalsRow}>
+          {VITALS.map((v) => (
+            <View key={v.label} style={styles.vitalItem}>
+              <View style={styles.vitalValueRow}>
+                <Text style={styles.vitalValue}>{v.value}</Text>
+                <Text style={styles.vitalUnit}>{v.unit}</Text>
+              </View>
+              <Text style={styles.vitalLabel}>{v.label}</Text>
             </View>
+          ))}
+        </View>
+      </View>
 
-            <View
-              style={[
-                styles.riskBadge,
-                { borderColor: risk, backgroundColor: `${risk}1A`, marginTop: 2 },
-              ]}
-            >
-              <Text style={[styles.riskBadgeText, { color: risk }]}>
-                مستوى الخطورة: {RISK_LABEL[ME.risk]}
-              </Text>
-            </View>
+      {/* chronic conditions */}
+      <View style={[styles.card, styles.cardFlush]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>الأمراض المزمنة</Text>
+        </View>
+        {ME.conditions.map((c, i) => (
+          <View key={c} style={[styles.condRow, i > 0 && styles.medDivider]}>
+            <Text style={styles.condText}>{c}</Text>
+            <View style={styles.condDot} />
+          </View>
+        ))}
+      </View>
 
-            <Text style={styles.qrSheetHint}>
-              اعرض هذا الرمز للفريق الطبي للوصول الفوري لملفك الصحي الكامل
+      <QrModal open={open} onClose={() => setOpen(false)} risk={risk} />
+    </ScrollView>
+  );
+}
+
+function QrModal({
+  open,
+  onClose,
+  risk,
+}: {
+  open: boolean;
+  onClose: () => void;
+  risk: string;
+}) {
+  return (
+    <Modal
+      visible={open}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.qrSheet}>
+          <TouchableOpacity
+            style={styles.qrClose}
+            onPress={onClose}
+            hitSlop={12}
+            activeOpacity={0.7}
+          >
+            <X color={SN.fg2} size={22} />
+          </TouchableOpacity>
+
+          <Text style={styles.qrSheetLabel}>بطاقتي الصحية</Text>
+          <Text style={styles.qrSheetName}>{ME.name}</Text>
+
+          <View style={styles.qrBig}>
+            <QRCode value={QR_PAYLOAD} size={236} backgroundColor="#ffffff" color="#0d0d0d" />
+          </View>
+
+          <View
+            style={[
+              styles.riskBadge,
+              { borderColor: risk, backgroundColor: `${risk}1A`, marginTop: 2 },
+            ]}
+          >
+            <Text style={[styles.riskBadgeText, { color: risk }]}>
+              مستوى الخطورة: {RISK_LABEL[ME.risk]}
             </Text>
-            <Text style={styles.qrSheetCode}>{ME.id}</Text>
+          </View>
+
+          <Text style={styles.qrSheetHint}>
+            اعرض هذا الرمز للفريق الطبي للوصول الفوري لملفك الصحي الكامل
+          </Text>
+          <Text style={styles.qrSheetCode}>{ME.id}</Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ─── Tab: الطوارئ — Help / Emergency ────────────────────────────────────────
+
+function TabHelp({ onCall }: { onCall: () => void }) {
+  return (
+    <ScrollView
+      style={styles.tabScroll}
+      contentContainerStyle={styles.tabContent}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* 937 hotline */}
+      <View style={styles.card}>
+        <View style={styles.hotlineTop}>
+          <Text style={styles.hotlineDigits}>937</Text>
+          <View style={styles.hotlineInfo}>
+            <Text style={styles.hotlineTag}>الخط الساخن</Text>
+            <Text style={styles.hotlineTitle}>طوارئ صحية للحجاج</Text>
+            <Text style={styles.hotlineSub}>مترجم فوري · 24/7 · مجاني</Text>
           </View>
         </View>
-      </Modal>
-    </>
+
+        <TouchableOpacity style={styles.callBtn} activeOpacity={0.85} onPress={onCall}>
+          <Phone color="#f7f7f5" size={18} fill="#f7f7f5" />
+          <Text style={styles.callBtnText}>اتصل الآن</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* quick actions */}
+      <ActionRow
+        Icon={MessageSquare}
+        label="دردشة مع ممرض"
+        sub="استجابة خلال دقائق"
+      />
+      <ActionRow
+        Icon={MapPin}
+        label="أقرب مركز صحي"
+        sub="مركز منى — ٣٢٠ م"
+      />
+      <ActionRow
+        Icon={PlusCircle}
+        label="إسعاف إلى موقعي"
+        sub="يستخدم موقعك الحالي"
+      />
+    </ScrollView>
+  );
+}
+
+function ActionRow({
+  Icon,
+  label,
+  sub,
+}: {
+  Icon: typeof MessageSquare;
+  label: string;
+  sub: string;
+}) {
+  return (
+    <TouchableOpacity style={styles.actionRow} activeOpacity={0.75}>
+      <ChevronLeft color={SN.fg3} size={15} strokeWidth={1.8} />
+      <View style={styles.actionText}>
+        <Text style={styles.actionLabel}>{label}</Text>
+        <Text style={styles.actionSub}>{sub}</Text>
+      </View>
+      <View style={styles.actionIcon}>
+        <Icon color={SN.gold} size={17} strokeWidth={1.7} />
+      </View>
+    </TouchableOpacity>
   );
 }
 
@@ -221,8 +441,7 @@ function HealthCard() {
 export default function PilgrimHome() {
   const router = useRouter();
   const [meds, setMeds] = useState<Med[]>(INITIAL_MEDS);
-
-  const taken = meds.filter((m) => m.status === "taken").length;
+  const [tab, setTab] = useState<TabId>("today");
 
   const markTaken = (idx: number) =>
     setMeds((prev) =>
@@ -252,96 +471,38 @@ export default function PilgrimHome() {
         <Bell color={SN.fg3} size={19} strokeWidth={1.6} />
       </View>
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* greeting */}
-        <View style={styles.greeting}>
-          <Text style={styles.greetingEyebrow}>السلام عليكم</Text>
-          <Text style={styles.greetingName}>محمد، تقبّل الله حجّك</Text>
-        </View>
+      {/* greeting */}
+      <View style={styles.greeting}>
+        <Text style={styles.greetingEyebrow}>السلام عليكم</Text>
+        <Text style={styles.greetingName}>محمد، تقبّل الله حجّك</Text>
+        <Text style={styles.greetingSub}>اليوم الثالث · يوم النحر · منى</Text>
+      </View>
 
-        {/* health card + QR */}
-        <HealthCard />
-
-        {/* hotline — primary */}
-        <Hotline onCall={() => router.push("/call")} />
-
-        {/* hydration reminder */}
-        <View style={styles.hydrationCard}>
-          <Droplet color={SN.gold} size={20} strokeWidth={1.6} />
-          <View style={styles.hydrationCardText}>
-            <Text style={styles.hydrationCardTitle}>اشرب الماء بانتظام</Text>
-            <Text style={styles.hydrationCardSub}>
-              لا تنسَ شرب الماء والبقاء في مكان بارد
-            </Text>
-          </View>
-        </View>
-
-        {/* medications */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>أدوية اليوم</Text>
-          <Text style={styles.medsCount}>
-            {taken}/{meds.length} تم
-          </Text>
-        </View>
-        <View>
-          {meds.map((m, i) => {
-            const isNow = m.status === "now";
-            const isTaken = m.status === "taken";
+      {/* segmented tabs */}
+      <View style={styles.tabBarWrap}>
+        <View style={styles.tabBar}>
+          {TABS.map((t) => {
+            const active = t.id === tab;
             return (
-              <View
-                key={m.name}
-                style={[
-                  styles.medRow,
-                  i < meds.length - 1 && styles.medDivider,
-                  isNow && styles.medRowNow,
-                ]}
+              <TouchableOpacity
+                key={t.id}
+                style={[styles.tabBtn, active && styles.tabBtnActive]}
+                activeOpacity={0.8}
+                onPress={() => setTab(t.id)}
               >
-                <View style={styles.medTimeWrap}>
-                  <Text
-                    style={[
-                      styles.medTime,
-                      isTaken && { color: SN.fg3 },
-                      isNow && { color: SN.gold },
-                    ]}
-                  >
-                    {m.time}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.medName,
-                    isTaken && styles.medNameTaken,
-                  ]}
-                >
-                  {m.name}
+                <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
+                  {t.ar}
                 </Text>
-                {isTaken && (
-                  <View style={styles.medTakenTag}>
-                    <Check color={SN.teal} size={11} strokeWidth={2.5} />
-                    <Text style={styles.medTakenText}>تم</Text>
-                  </View>
-                )}
-                {isNow && (
-                  <TouchableOpacity
-                    style={styles.medNowBtn}
-                    activeOpacity={0.8}
-                    onPress={() => markTaken(i)}
-                  >
-                    <Text style={styles.medNowBtnText}>أخذتها</Text>
-                  </TouchableOpacity>
-                )}
-                {m.status === "upcoming" && (
-                  <Text style={styles.medUpcoming}>قادم</Text>
-                )}
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
-      </ScrollView>
+      </View>
+
+      {/* tab content */}
+      {tab === "today" && <TabToday meds={meds} onTake={markTaken} />}
+      {tab === "health" && <TabHealth />}
+      {tab === "help" && <TabHelp onCall={() => router.push("/call")} />}
     </SafeAreaView>
   );
 }
@@ -358,9 +519,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 22,
     paddingTop: 4,
-    paddingBottom: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: SN.rule,
+    paddingBottom: 12,
   },
   avatar: {
     width: 32,
@@ -384,84 +543,128 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: SN.bg,
   },
-  wordmark: {
-    fontSize: 24,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: SN.gold,
-  },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 8 },
+  wordmark: { fontSize: 24, fontWeight: "700", letterSpacing: 2, color: SN.gold },
 
   // greeting
-  greeting: {
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: SN.rule,
-    alignItems: "flex-end",
-  },
-  greetingEyebrow: {
-    fontSize: 11,
-    color: SN.fg3,
-    letterSpacing: 1.5,
-    marginBottom: 5,
-  },
-  greetingName: { fontSize: 19, fontWeight: "700", color: SN.fg1, lineHeight: 24 },
+  greeting: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 18, alignItems: "flex-end" },
+  greetingEyebrow: { fontSize: 11, color: SN.fg3, letterSpacing: 2, marginBottom: 9 },
+  greetingName: { fontSize: 23, fontWeight: "700", color: SN.fg1, lineHeight: 30 },
+  greetingSub: { fontSize: 12.5, color: SN.fg3, marginTop: 7, textAlign: "right" },
 
-  // ─── health card + QR ──────────────────────────────────────────────────
-  idCard: {
-    marginHorizontal: 18,
-    marginBottom: 16,
+  // segmented tabs
+  tabBarWrap: { paddingHorizontal: 24, paddingBottom: 16 },
+  tabBar: {
+    flexDirection: "row",
     backgroundColor: SN.bgRaised,
-    borderRadius: 16,
+    borderRadius: 999,
+    padding: 4,
     borderWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 15,
-    overflow: "hidden",
+    borderColor: SN.rule,
   },
-  idAccent: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    right: 0,
-    width: 4,
-  },
-  idTopRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  idInitials: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: SN.graphite2,
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
   },
-  idInitialsText: { color: SN.fg1, fontSize: 14, fontWeight: "700" },
-  idNameWrap: { flex: 1, alignItems: "flex-end" },
-  idCardLabel: {
-    color: SN.gold,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.3,
+  tabBtnActive: { backgroundColor: SN.gold },
+  tabBtnText: { fontSize: 13, fontWeight: "500", color: SN.fg2 },
+  tabBtnTextActive: { color: SN.goldInk, fontWeight: "800" },
+
+  // tab scroll
+  tabScroll: { flex: 1 },
+  tabContent: { paddingHorizontal: 24, paddingBottom: 28 },
+
+  // generic card
+  card: {
+    backgroundColor: SN.bgRaised,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: SN.rule,
+    padding: 20,
+    marginBottom: 14,
   },
-  idName: {
-    color: SN.fg1,
-    fontSize: 16,
-    fontWeight: "700",
-    textAlign: "right",
-    marginTop: 2,
+  cardFlush: { padding: 0, overflow: "hidden" },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 14,
   },
-  idMeta: { color: SN.fg3, fontSize: 12, marginTop: 2, textAlign: "right" },
-  riskBadge: {
-    borderWidth: 1.5,
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
+  cardHeadText: { alignItems: "flex-end" },
+  cardTitle: { fontSize: 14, fontWeight: "700", color: SN.fg1 },
+  cardSub: { fontSize: 11.5, color: SN.fg3, marginTop: 4, textAlign: "right" },
+
+  // hydration
+  hydroNumber: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  hydroDrunk: { fontSize: 26, fontWeight: "800", color: SN.gold, letterSpacing: -0.5 },
+  hydroGoal: { fontSize: 13, color: SN.fg3 },
+  hydroBars: { flexDirection: "row", gap: 6 },
+  hydroBar: { flex: 1, height: 8, borderRadius: 4 },
+
+  // meds
+  medsCount: { fontSize: 11.5, color: SN.fg3, letterSpacing: 0.3 },
+  medRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 14,
+  },
+  medRowNow: { backgroundColor: SN.goldSoft },
+  medDivider: { borderTopWidth: 1, borderTopColor: SN.rule },
+  medNameWrap: { flex: 1, alignItems: "flex-end" },
+  medName: { fontSize: 13.5, fontWeight: "700", color: SN.fg, textAlign: "right" },
+  medNameTaken: { color: SN.fg3, textDecorationLine: "line-through" },
+  medDose: { fontSize: 11, color: SN.fg3, marginTop: 2 },
+  medTime: { fontSize: 14, fontWeight: "700", color: SN.fg1, minWidth: 48, textAlign: "left" },
+  medCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: SN.tealFill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  medNowBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    backgroundColor: SN.gold,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
   },
-  riskBadgeText: { fontSize: 12, fontWeight: "800" },
-  idDivider: { height: 1, backgroundColor: SN.rule, marginVertical: 13 },
-  idBottomRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  medNowBtnText: { color: SN.goldInk, fontSize: 12, fontWeight: "800" },
+  medUpcoming: { fontSize: 11.5, color: SN.fg3 },
+
+  // advisory
+  advisory: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 10,
+    paddingHorizontal: 4,
+    paddingTop: 4,
+  },
+  advisoryText: { fontSize: 11.5, color: SN.fg3, lineHeight: 18 },
+
+  // identity card
+  idTopRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  idNameWrap: { flex: 1, alignItems: "flex-end" },
+  idCardLabel: { color: SN.fg3, fontSize: 10.5, fontWeight: "700", letterSpacing: 1.4, marginBottom: 8 },
+  idName: { color: SN.fg1, fontSize: 17, fontWeight: "700", textAlign: "right" },
+  idMeta: { color: SN.fg3, fontSize: 12, marginTop: 5, textAlign: "right" },
+  riskBadge: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  riskBadgeText: { fontSize: 11, fontWeight: "800" },
+  idDivider: { height: 1, backgroundColor: SN.rule, marginVertical: 16 },
+  idBottomRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   idQrThumb: {
     width: 64,
     height: 64,
@@ -471,21 +674,80 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   idBottomText: { flex: 1, alignItems: "flex-end" },
-  idCode: {
-    color: SN.fg2,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  idHintRow: {
+  idCode: { color: SN.fg1, fontSize: 12.5, fontWeight: "700", letterSpacing: 0.5 },
+  idHintRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5 },
+  idCardHint: { color: SN.fg3, fontSize: 11, textAlign: "right" },
+
+  // vitals
+  vitalsTime: { fontSize: 10.5, color: SN.fg3, letterSpacing: 0.5 },
+  vitalsRow: { flexDirection: "row", gap: 16 },
+  vitalItem: { flex: 1, alignItems: "flex-end" },
+  vitalValueRow: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  vitalValue: { fontSize: 19, fontWeight: "800", color: SN.fg1, letterSpacing: -0.5 },
+  vitalUnit: { fontSize: 10, color: SN.fg3 },
+  vitalLabel: { fontSize: 11, color: SN.fg3, marginTop: 6 },
+
+  // conditions
+  condRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    marginTop: 4,
+    justifyContent: "flex-end",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 13,
   },
-  idCardHint: { color: SN.fg3, fontSize: 11 },
+  condText: { fontSize: 13, color: SN.fg, textAlign: "right" },
+  condDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: SN.goldDeep },
 
-  // ─── QR fullscreen modal ───────────────────────────────────────────────
+  // hotline
+  hotlineTop: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  hotlineInfo: { flex: 1, alignItems: "flex-end" },
+  hotlineTag: { fontSize: 10.5, color: SN.fg3, fontWeight: "700", letterSpacing: 1.6, marginBottom: 8 },
+  hotlineTitle: { fontSize: 17, fontWeight: "700", color: SN.fg1 },
+  hotlineSub: { fontSize: 11.5, color: SN.fg3, marginTop: 6, textAlign: "right" },
+  hotlineDigits: { fontSize: 32, fontWeight: "800", color: SN.fg1, letterSpacing: 1, marginRight: 14 },
+  callBtn: {
+    backgroundColor: SN.red,
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  callBtnText: { fontSize: 15, fontWeight: "800", color: "#f7f7f5", letterSpacing: 0.2 },
+
+  // action rows
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: SN.bgRaised,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: SN.rule,
+    paddingHorizontal: 18,
+    paddingVertical: 15,
+    marginBottom: 10,
+  },
+  actionText: { flex: 1, alignItems: "flex-end" },
+  actionLabel: { fontSize: 13.5, fontWeight: "700", color: SN.fg1 },
+  actionSub: { fontSize: 11.5, color: SN.fg3, marginTop: 3, textAlign: "right" },
+  actionIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: SN.goldSoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // QR fullscreen modal
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.82)",
@@ -514,12 +776,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
     textAlign: "center",
   },
-  qrBig: {
-    padding: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 16,
-    marginBottom: 16,
-  },
+  qrBig: { padding: 16, backgroundColor: "#ffffff", borderRadius: 16, marginBottom: 16 },
   qrSheetHint: {
     color: SN.fg2,
     fontSize: 13,
@@ -528,132 +785,5 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingHorizontal: 6,
   },
-  qrSheetCode: {
-    color: SN.fg3,
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    marginTop: 10,
-  },
-
-  // hotline
-  hotline: {
-    borderTopWidth: 3,
-    borderTopColor: SN.red,
-    backgroundColor: SN.redFill,
-    borderBottomWidth: 1,
-    borderBottomColor: SN.redRule,
-    paddingHorizontal: 22,
-    paddingVertical: 18,
-  },
-  hotlineTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: 15,
-  },
-  hotlineInfo: { flex: 1, alignItems: "flex-end" },
-  hotlineTag: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 7 },
-  hotlineTagText: {
-    fontSize: 10,
-    color: SN.red,
-    fontWeight: "700",
-    letterSpacing: 1.6,
-  },
-  hotlineDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: SN.red },
-  hotlineTitle: { fontSize: 16, fontWeight: "700", color: SN.fg1 },
-  hotlineSub: { fontSize: 12, color: SN.fg2, marginTop: 5 },
-  hotlineNumber: { alignItems: "center", marginLeft: 14 },
-  hotlineDigits: {
-    fontSize: 34,
-    fontWeight: "800",
-    color: SN.red,
-    letterSpacing: 1,
-    lineHeight: 36,
-  },
-  hotlineCallLabel: { fontSize: 9, color: SN.red, letterSpacing: 1.5, marginTop: 3 },
-
-  callBtn: {
-    backgroundColor: SN.red,
-    borderRadius: 3,
-    paddingVertical: 17,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 11,
-  },
-  callBtnText: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: "#f7f7f5",
-    letterSpacing: 0.2,
-  },
-
-  chatAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: SN.redRule,
-    paddingTop: 14,
-  },
-  actionLabel: { fontSize: 12, color: SN.red, fontWeight: "600" },
-
-  // section header
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 22,
-    paddingTop: 15,
-    paddingBottom: 13,
-    borderBottomWidth: 1,
-    borderBottomColor: SN.ruleG,
-  },
-  sectionTitle: { fontSize: 13, fontWeight: "700", color: SN.fg1 },
-
-  // hydration reminder
-  hydrationCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    paddingHorizontal: 22,
-    paddingVertical: 16,
-    backgroundColor: SN.bgRaised,
-    borderBottomWidth: 1,
-    borderBottomColor: SN.rule,
-  },
-  hydrationCardText: { flex: 1, alignItems: "flex-end" },
-  hydrationCardTitle: { fontSize: 13.5, fontWeight: "700", color: SN.gold },
-  hydrationCardSub: { fontSize: 12, color: SN.fg2, marginTop: 4, textAlign: "right" },
-
-  // meds
-  medsCount: { fontSize: 11, color: SN.fg3 },
-  medRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    gap: 16,
-    borderRightWidth: 2,
-    borderRightColor: "transparent",
-  },
-  medRowNow: { backgroundColor: SN.goldFill, borderRightColor: SN.gold },
-  medDivider: { borderBottomWidth: 1, borderBottomColor: SN.rule },
-  medTimeWrap: { minWidth: 52 },
-  medTime: { fontSize: 15, fontWeight: "700", color: SN.fg1, letterSpacing: 0.3 },
-  medName: { flex: 1, fontSize: 13.5, fontWeight: "600", color: SN.fg, textAlign: "right" },
-  medNameTaken: { color: SN.fg3, textDecorationLine: "line-through" },
-  medTakenTag: { flexDirection: "row", alignItems: "center", gap: 5 },
-  medTakenText: { fontSize: 11.5, color: SN.teal, fontWeight: "600" },
-  medNowBtn: {
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    backgroundColor: SN.gold,
-    borderRadius: 3,
-  },
-  medNowBtnText: { color: SN.bgDeep, fontSize: 11.5, fontWeight: "800" },
-  medUpcoming: { fontSize: 11.5, color: SN.fg3 },
+  qrSheetCode: { color: SN.fg3, fontSize: 13, fontWeight: "700", letterSpacing: 0.6, marginTop: 10 },
 });

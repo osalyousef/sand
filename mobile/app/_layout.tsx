@@ -15,7 +15,7 @@ export default function RootLayout() {
 
   return (
     <ScannedContext.Provider value={{ recents, add }}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
     </ScannedContext.Provider>
   );

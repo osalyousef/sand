@@ -186,7 +186,7 @@ export default function CallScreen() {
               onPress={decline}
               activeOpacity={0.85}
             >
-              <PhoneOff color="#fff" size={28} />
+              <PhoneOff color="#3d3424" size={28} />
             </TouchableOpacity>
             <Text style={styles.bigBtnLabel}>رفض</Text>
           </View>
@@ -196,7 +196,7 @@ export default function CallScreen() {
               onPress={accept}
               activeOpacity={0.85}
             >
-              <Phone color="#fff" size={28} />
+              <Phone color="#3d3424" size={28} />
             </TouchableOpacity>
             <Text style={styles.bigBtnLabel}>قبول</Text>
           </View>
@@ -332,7 +332,7 @@ export default function CallScreen() {
           />
         </View>
         <TouchableOpacity style={styles.endBtn} onPress={endCall} activeOpacity={0.85}>
-          <PhoneOff color="#fff" size={26} />
+          <PhoneOff color="#3d3424" size={26} />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -352,35 +352,35 @@ function ControlBtn({
   onPress: () => void;
   tint?: string;
 }) {
-  const color = tint ?? "#fff";
+  const color = tint ?? "#3d3424";
   return (
     <TouchableOpacity style={styles.ctrlCol} onPress={onPress} activeOpacity={0.7}>
       <View
         style={[
           styles.ctrlBtn,
-          active && { backgroundColor: tint ? `${tint}22` : "#1f2937", borderColor: tint ?? "#374151" },
+          active && { backgroundColor: tint ? `${tint}22` : "#e6dcc8", borderColor: tint ?? "#cbbfa8" },
         ]}
       >
-        <Icon color={active ? color : "#6b7280"} size={22} />
+        <Icon color={active ? color : "#9a917f"} size={22} />
       </View>
-      <Text style={[styles.ctrlLabel, active && { color: tint ?? "#fff" }]}>{label}</Text>
+      <Text style={[styles.ctrlLabel, active && { color: tint ?? "#3d3424" }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0d0d0d" },
+  safe: { flex: 1, backgroundColor: "#f7f0e1" },
 
   // ── incoming ─────────────────────────────────────────
   incomingTop: { alignItems: "center", paddingTop: 12, gap: 10 },
-  incomingLabel: { color: "#9ca3af", fontSize: 14, letterSpacing: 0.5 },
+  incomingLabel: { color: "#6b6457", fontSize: 14, letterSpacing: 0.5 },
   translateBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1c1410",
+    backgroundColor: "#fdf0e2",
     borderWidth: 1,
-    borderColor: "#7c2d12",
+    borderColor: "#fad4b3",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -389,14 +389,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1c1410",
+    backgroundColor: "#fdf0e2",
     borderWidth: 1,
-    borderColor: "#7c2d12",
+    borderColor: "#fad4b3",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
   },
-  translateBadgeText: { color: "#fdba74", fontSize: 11, fontWeight: "700" },
+  translateBadgeText: { color: "#9a3412", fontSize: 11, fontWeight: "700" },
 
   avatarWrap: {
     alignItems: "center",
@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "#161616",
+    backgroundColor: "#fdf8ec",
     borderWidth: 2,
     borderColor: "#f97316",
     alignItems: "center",
@@ -424,11 +424,11 @@ const styles = StyleSheet.create({
   avatarFlag: { fontSize: 64 },
 
   callerInfo: { alignItems: "center", marginTop: 28, gap: 6 },
-  callerName: { color: "#fff", fontSize: 28, fontWeight: "800" },
-  callerMeta: { color: "#9ca3af", fontSize: 15 },
+  callerName: { color: "#3d3424", fontSize: 28, fontWeight: "800" },
+  callerMeta: { color: "#6b6457", fontSize: 15 },
   locationRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
   locationDot: { fontSize: 14 },
-  locationText: { color: "#e5e7eb", fontSize: 14, fontWeight: "600" },
+  locationText: { color: "#3f3a30", fontSize: 14, fontWeight: "600" },
 
   incomingActions: {
     flexDirection: "row",
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   declineBtn: { backgroundColor: "#dc2626" },
   acceptBtn: { backgroundColor: "#16a34a" },
-  bigBtnLabel: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  bigBtnLabel: { color: "#3d3424", fontSize: 13, fontWeight: "600" },
 
   // ── active ───────────────────────────────────────────
   activeTop: {
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   },
   activeTopLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22c55e" },
-  timer: { color: "#fff", fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  timer: { color: "#3d3424", fontSize: 15, fontWeight: "700", fontVariant: ["tabular-nums"] },
 
   activeCaller: {
     flexDirection: "row",
@@ -469,21 +469,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
   avatarSmall: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#161616",
+    backgroundColor: "#fdf8ec",
     borderWidth: 1.5,
     borderColor: "#f97316",
     alignItems: "center",
     justifyContent: "center",
   },
   avatarFlagSmall: { fontSize: 22 },
-  activeName: { color: "#fff", fontSize: 16, fontWeight: "800", textAlign: "right" },
-  activeMeta: { color: "#9ca3af", fontSize: 12, textAlign: "right" },
+  activeName: { color: "#3d3424", fontSize: 16, fontWeight: "800", textAlign: "right" },
+  activeMeta: { color: "#6b6457", fontSize: 12, textAlign: "right" },
 
   transcript: { flex: 1 },
   transcriptContent: { padding: 16, gap: 12, paddingBottom: 24 },
@@ -493,10 +493,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     padding: 16,
-    backgroundColor: "#111",
+    backgroundColor: "#fdf8ec",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: "#e6dcc8",
   },
   listeningDot: {
     width: 10,
@@ -504,26 +504,26 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#f97316",
   },
-  listeningText: { color: "#9ca3af", fontSize: 13, flex: 1 },
+  listeningText: { color: "#6b6457", fontSize: 13, flex: 1 },
 
   bubble: {
-    backgroundColor: "#111",
+    backgroundColor: "#fdf8ec",
     borderRadius: 14,
     padding: 12,
     gap: 6,
     borderWidth: 1,
   },
-  bubblePilgrim: { borderColor: "#1f2937" },
-  bubbleCoord: { borderColor: "#7c2d12", backgroundColor: "#1a120d" },
+  bubblePilgrim: { borderColor: "#e6dcc8" },
+  bubbleCoord: { borderColor: "#fad4b3", backgroundColor: "#fdf0e2" },
 
   bubbleHead: { flexDirection: "row", alignItems: "center", gap: 6 },
   roleDot: { width: 6, height: 6, borderRadius: 3 },
   dotPilgrim: { backgroundColor: "#3b82f6" },
   dotCoord: { backgroundColor: "#f97316" },
-  roleLabel: { color: "#fff", fontSize: 12, fontWeight: "800" },
-  roleLang: { color: "#6b7280", fontSize: 11, marginLeft: "auto" },
+  roleLabel: { color: "#3d3424", fontSize: 12, fontWeight: "800" },
+  roleLang: { color: "#9a917f", fontSize: 11, marginLeft: "auto" },
 
-  original: { color: "#e5e7eb", fontSize: 15, lineHeight: 22 },
+  original: { color: "#3f3a30", fontSize: 15, lineHeight: 22 },
   translateLine: {
     flexDirection: "row",
     alignItems: "center",
@@ -531,12 +531,12 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: "#1f2937",
+    borderTopColor: "#e6dcc8",
   },
-  translateLabel: { color: "#9ca3af", fontSize: 10, fontWeight: "700" },
+  translateLabel: { color: "#6b6457", fontSize: 10, fontWeight: "700" },
   translation: { fontSize: 15, lineHeight: 22, fontWeight: "600" },
-  translationAr: { color: "#fff", textAlign: "right" },
-  translationFor: { color: "#fdba74" },
+  translationAr: { color: "#3d3424", textAlign: "right" },
+  translationFor: { color: "#9a3412" },
   caret: { color: "#f97316" },
 
   // ── controls ─────────────────────────────────────────
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 24,
     borderTopWidth: 1,
-    borderTopColor: "#1a1a1a",
+    borderTopColor: "#e6dcc8",
     gap: 16,
     alignItems: "center",
   },
@@ -555,13 +555,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     borderWidth: 1.5,
-    borderColor: "#262626",
+    borderColor: "#e6dcc8",
     alignItems: "center",
     justifyContent: "center",
   },
-  ctrlLabel: { color: "#6b7280", fontSize: 11, fontWeight: "600" },
+  ctrlLabel: { color: "#9a917f", fontSize: 11, fontWeight: "600" },
 
   endBtn: {
     width: 68,
@@ -574,6 +574,6 @@ const styles = StyleSheet.create({
 
   // ── ended ────────────────────────────────────────────
   endedWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
-  endedTitle: { color: "#fff", fontSize: 22, fontWeight: "800" },
-  endedTime: { color: "#9ca3af", fontSize: 16, fontVariant: ["tabular-nums"] },
+  endedTitle: { color: "#3d3424", fontSize: 22, fontWeight: "800" },
+  endedTime: { color: "#6b6457", fontSize: 16, fontVariant: ["tabular-nums"] },
 });

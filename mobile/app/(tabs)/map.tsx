@@ -205,23 +205,23 @@ const SITES: { key: string; label: string; lat: number; lng: number; delta: numb
   { key: "arafat",     label: "عرفات",     lat: 21.3545, lng: 39.9840, delta: 0.020 },
 ];
 
-// ─── dark map style (Google Maps JSON) ─────────────────────────────────────
+// ─── light map style (Google Maps JSON — warm cream) ───────────────────────
 
 const DARK_MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#1d1d1d" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1d1d1d" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d1d5db" }] },
+  { elementType: "geometry", stylers: [{ color: "#f7f0e1" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#f7f0e1" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6b6457" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#3d3424" }] },
   { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#1f2a1f" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#2a2a2a" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1d1d1d" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#6b7280" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#3a2a1a" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#fdba74" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e3ecd9" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#fdf8ec" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#e6dcc8" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9a917f" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#f7e6cf" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#9a3412" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0a0a0a" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4b5563" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#cfe3ee" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#6b6457" }] },
 ];
 
 // ─── screen ────────────────────────────────────────────────────────────────
@@ -355,7 +355,7 @@ export default function MapScreen() {
           {mode === "pins" ? (
             <Flame color="#f97316" size={16} />
           ) : (
-            <MapPin color="#374151" size={16} />
+            <MapPin color="#cbbfa8" size={16} />
           )}
           <Text style={styles.modeBtnText}>
             {mode === "pins" ? "حرارة" : "نقاط"}
@@ -417,7 +417,7 @@ export default function MapScreen() {
         showsPointsOfInterests={false}
         showsBuildings
         showsCompass={false}
-        userInterfaceStyle="dark"
+        userInterfaceStyle="light"
         customMapStyle={DARK_MAP_STYLE}
       >
         {mode === "pins" &&
@@ -478,7 +478,7 @@ export default function MapScreen() {
           onPress={() => openDetail(selected)}
           style={[styles.callout, { borderLeftColor: RISK_COLORS[selected.risk] }]}
         >
-          <ChevronLeft color="#9ca3af" size={20} />
+          <ChevronLeft color="#6b6457" size={20} />
           <View style={styles.calloutBody}>
             <Text style={styles.calloutName}>{selected.name}</Text>
             <Text style={styles.calloutMeta}>
@@ -525,7 +525,7 @@ export default function MapScreen() {
 // ─── styles ────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0d0d0d" },
+  safe: { flex: 1, backgroundColor: "#f7f0e1" },
 
   header: {
     flexDirection: "row",
@@ -533,11 +533,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  headerTitle: { color: "#3d3424", fontSize: 18, fontWeight: "700" },
   modeBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -546,38 +546,38 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: "#262626",
-    backgroundColor: "#161616",
+    borderColor: "#e6dcc8",
+    backgroundColor: "#fdf8ec",
   },
-  modeBtnText: { color: "#e5e7eb", fontSize: 12, fontWeight: "700" },
+  modeBtnText: { color: "#3f3a30", fontSize: 12, fontWeight: "700" },
 
   siteBar: {
     flexDirection: "row",
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
   siteChip: {
     flex: 1,
     paddingVertical: 7,
     borderRadius: 8,
-    backgroundColor: "#1f2937",
+    backgroundColor: "#e6dcc8",
     alignItems: "center",
   },
-  siteChipText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  siteChipText: { color: "#3d3424", fontSize: 13, fontWeight: "700" },
 
   filterBar: {
     flexDirection: "row",
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
   chip: {
     flex: 1,
@@ -588,11 +588,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: "#262626",
-    backgroundColor: "#161616",
+    borderColor: "#e6dcc8",
+    backgroundColor: "#fdf8ec",
   },
   chipDot: { width: 8, height: 8, borderRadius: 4 },
-  chipLabel: { color: "#e5e7eb", fontSize: 12, fontWeight: "600" },
+  chipLabel: { color: "#3f3a30", fontSize: 12, fontWeight: "600" },
   chipCount: { fontSize: 13, fontWeight: "800" },
 
   map: { flex: 1 },
@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 9,
     borderWidth: 2.5,
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -620,11 +620,11 @@ const styles = StyleSheet.create({
   callout: {
     marginHorizontal: 12,
     marginTop: 10,
-    backgroundColor: "#161616",
+    backgroundColor: "#fdf8ec",
     borderRadius: 10,
     borderLeftWidth: 4,
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "#e6dcc8",
     padding: 12,
     flexDirection: "row",
     alignItems: "center",
@@ -636,22 +636,22 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   calloutBody: { alignItems: "flex-end", flex: 1 },
-  calloutName: { color: "#fff", fontSize: 15, fontWeight: "700", textAlign: "right" },
-  calloutMeta: { color: "#9ca3af", fontSize: 13, textAlign: "right", marginTop: 2 },
-  calloutClose: { color: "#9ca3af", fontSize: 18, paddingLeft: 12 },
+  calloutName: { color: "#3d3424", fontSize: 15, fontWeight: "700", textAlign: "right" },
+  calloutMeta: { color: "#6b6457", fontSize: 13, textAlign: "right", marginTop: 2 },
+  calloutClose: { color: "#6b6457", fontSize: 18, paddingLeft: 12 },
 
   legend: {
     flexDirection: "row",
     justifyContent: "center",
     gap: 20,
     paddingVertical: 10,
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
     borderTopWidth: 1,
-    borderTopColor: "#1a1a1a",
+    borderTopColor: "#e6dcc8",
   },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { color: "#e5e7eb", fontSize: 12, fontWeight: "600" },
+  legendText: { color: "#3f3a30", fontSize: 12, fontWeight: "600" },
 
   ramp: { flexDirection: "row", borderRadius: 3, overflow: "hidden" },
   rampCell: { width: 22, height: 10 },
@@ -668,8 +668,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: "rgba(13,13,13,0.85)",
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "#e6dcc8",
   },
-  tempValue: { color: "#fff", fontSize: 18, fontWeight: "800" },
-  tempCaption: { color: "#9ca3af", fontSize: 11, fontWeight: "600", marginRight: 2 },
+  tempValue: { color: "#3d3424", fontSize: 18, fontWeight: "800" },
+  tempCaption: { color: "#6b6457", fontSize: 11, fontWeight: "600", marginRight: 2 },
 });

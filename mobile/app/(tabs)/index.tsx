@@ -62,7 +62,7 @@ function AlertBanner({ onDismiss }: { onDismiss: () => void }) {
   return (
     <View style={styles.alertBanner}>
       <TouchableOpacity onPress={onDismiss} style={styles.alertDismiss}>
-        <X color="#fff" size={16} />
+        <X color="#3d3424" size={16} />
       </TouchableOpacity>
       <View style={styles.alertTextGroup}>
         <Text style={styles.alertTitle}>تنبيه حراري — منطقة منى</Text>
@@ -138,11 +138,11 @@ export default function Dashboard() {
         >
           <Text style={styles.headerAvatarText}>م.ص</Text>
           <View style={styles.headerAvatarBadge}>
-            <Repeat color="#0d0d0d" size={9} strokeWidth={2.6} />
+            <Repeat color="#f7f0e1" size={9} strokeWidth={2.6} />
           </View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>سند</Text>
-        <Bell color="#9ca3af" size={22} />
+        <Bell color="#6b6457" size={22} />
       </View>
 
       <ScrollView
@@ -178,7 +178,7 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: "#0d0d0d",
+    backgroundColor: "#f7f0e1",
   },
   header: {
     flexDirection: "row",
@@ -187,12 +187,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#fff",
+    color: "#3d3424",
     textDecorationLine: "underline",
     textDecorationColor: "#f97316",
   },
@@ -200,12 +200,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#1f2937",
+    backgroundColor: "#e6dcc8",
     alignItems: "center",
     justifyContent: "center",
   },
   headerAvatarText: {
-    color: "#9ca3af",
+    color: "#6b6457",
     fontSize: 12,
     fontWeight: "600",
   },
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: "#0d0d0d",
+    borderColor: "#f7f0e1",
   },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   // alert
   alertBanner: {
     margin: 12,
-    backgroundColor: "#7c2d12",
+    backgroundColor: "#fad4b3",
     borderRadius: 10,
     padding: 12,
     flexDirection: "row",
@@ -238,28 +238,28 @@ const styles = StyleSheet.create({
   alertDismiss: { paddingTop: 2 },
   alertTextGroup: { flex: 1, alignItems: "flex-end" },
   alertTitle: {
-    color: "#fed7aa",
+    color: "#9a3412",
     fontWeight: "700",
     fontSize: 14,
     textAlign: "right",
   },
-  alertSub: { color: "#fdba74", fontSize: 12, marginTop: 2, textAlign: "right" },
+  alertSub: { color: "#9a3412", fontSize: 12, marginTop: 2, textAlign: "right" },
 
   // env
   envRow: {
     flexDirection: "row",
     marginHorizontal: 12,
     marginTop: 10,
-    backgroundColor: "#111",
+    backgroundColor: "#fdf8ec",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: "#e6dcc8",
     paddingVertical: 10,
   },
   envItem: { flex: 1, alignItems: "center", gap: 2 },
-  envDivider: { width: 1, backgroundColor: "#1f2937" },
-  envValue: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  envLabel: { color: "#6b7280", fontSize: 10 },
+  envDivider: { width: 1, backgroundColor: "#e6dcc8" },
+  envValue: { color: "#3d3424", fontSize: 13, fontWeight: "700" },
+  envLabel: { color: "#9a917f", fontSize: 10 },
 
   // section
   sectionHeader: {
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 8,
   },
-  sectionTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  sectionTitle: { color: "#3d3424", fontSize: 16, fontWeight: "700" },
   seeAll: { flexDirection: "row", alignItems: "center", gap: 2 },
   seeAllText: { color: "#f97316", fontSize: 13 },
 
@@ -278,19 +278,19 @@ const styles = StyleSheet.create({
   caseCard: {
     marginHorizontal: 12,
     marginBottom: 8,
-    backgroundColor: "#111",
+    backgroundColor: "#fdf8ec",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: "#e6dcc8",
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
   },
   caseContent: { flex: 1, alignItems: "flex-end" },
-  caseName: { color: "#fff", fontWeight: "700", fontSize: 15, textAlign: "right" },
-  caseMeta: { color: "#6b7280", fontSize: 12, marginTop: 2, textAlign: "right" },
-  caseComplaint: { color: "#9ca3af", fontSize: 12, marginTop: 4, textAlign: "right" },
+  caseName: { color: "#3d3424", fontWeight: "700", fontSize: 15, textAlign: "right" },
+  caseMeta: { color: "#9a917f", fontSize: 12, marginTop: 2, textAlign: "right" },
+  caseComplaint: { color: "#6b6457", fontSize: 12, marginTop: 4, textAlign: "right" },
   caseBadge: {
     borderWidth: 1.5,
     borderRadius: 6,

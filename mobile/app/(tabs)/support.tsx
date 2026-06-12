@@ -17,6 +17,7 @@ import {
   X,
   Navigation,
   Radio,
+  ChevronLeft,
 } from "lucide-react-native";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 
@@ -128,10 +129,10 @@ export default function DispatchScreen() {
             <TouchableOpacity
               key={d.id}
               style={styles.row}
-              activeOpacity={0.85}
+              activeOpacity={0.7}
               onPress={() => setActive(d)}
             >
-              <View style={[styles.rowStripe, { backgroundColor: color }]} />
+              <View style={[styles.rowIndicator, { backgroundColor: color }]} />
               <View style={styles.rowBody}>
                 <View style={styles.rowTop}>
                   <Text style={styles.rowAgo}>{d.ago}</Text>
@@ -143,7 +144,7 @@ export default function DispatchScreen() {
                   <Text style={styles.rowReason}>{d.reason}</Text>
                   <View style={styles.rowZone}>
                     <Text style={styles.rowZoneText}>{d.zone}</Text>
-                    <MapPin color="#9ca3af" size={12} />
+                    <MapPin color="#6b6457" size={12} />
                   </View>
                 </View>
                 {isAccepted ? (
@@ -158,6 +159,7 @@ export default function DispatchScreen() {
                   </View>
                 )}
               </View>
+              <ChevronLeft color="#cbbfa8" size={18} />
             </TouchableOpacity>
           );
         })}
@@ -178,7 +180,7 @@ export default function DispatchScreen() {
               onPress={() => setActive(null)}
               hitSlop={12}
             >
-              <X color="#9ca3af" size={22} />
+              <X color="#6b6457" size={22} />
             </TouchableOpacity>
 
             {active && (
@@ -236,7 +238,7 @@ export default function DispatchScreen() {
                     </>
                   ) : (
                     <>
-                      <Navigation color="#fff" size={18} />
+                      <Navigation color="#fdf8ec" size={18} />
                       <Text style={styles.acceptText}>قبول المهمة — أنا في الطريق</Text>
                     </>
                   )}
@@ -260,7 +262,7 @@ export default function DispatchScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0d0d0d" },
+  safe: { flex: 1, backgroundColor: "#f7f0e1" },
 
   header: {
     flexDirection: "row",
@@ -269,22 +271,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1a1a1a",
+    borderBottomColor: "#e6dcc8",
   },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  headerTitle: { color: "#3d3424", fontSize: 18, fontWeight: "800" },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#0f1f12",
+    backgroundColor: "#dcfce7",
     borderWidth: 1,
-    borderColor: "#14532d",
+    borderColor: "#bbf7d0",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
   },
   statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#22c55e" },
-  statusText: { color: "#86efac", fontSize: 11, fontWeight: "700" },
+  statusText: { color: "#15803d", fontSize: 11, fontWeight: "700" },
 
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 32 },
@@ -292,9 +294,9 @@ const styles = StyleSheet.create({
   opsCard: {
     flexDirection: "row",
     gap: 12,
-    backgroundColor: "#121212",
+    backgroundColor: "#fdf8ec",
     borderWidth: 1,
-    borderColor: "#1f2937",
+    borderColor: "#e6dcc8",
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
@@ -303,14 +305,14 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: "#1c1410",
+    backgroundColor: "#fdf0e2",
     borderWidth: 1,
-    borderColor: "#7c2d12",
+    borderColor: "#fad4b3",
     alignItems: "center",
     justifyContent: "center",
   },
-  opsTitle: { color: "#fff", fontSize: 15, fontWeight: "800", textAlign: "right" },
-  opsBody: { color: "#9ca3af", fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: 3 },
+  opsTitle: { color: "#3d3424", fontSize: 15, fontWeight: "800", textAlign: "right" },
+  opsBody: { color: "#6b6457", fontSize: 12, lineHeight: 19, textAlign: "right", marginTop: 3 },
 
   sectionHeader: {
     flexDirection: "row",
@@ -318,30 +320,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  sectionTitle: { color: "#fff", fontSize: 15, fontWeight: "800" },
-  sectionCount: { color: "#6b7280", fontSize: 12 },
+  sectionTitle: { color: "#3d3424", fontSize: 15, fontWeight: "800" },
+  sectionCount: { color: "#9a917f", fontSize: 12 },
 
   row: {
     flexDirection: "row",
-    backgroundColor: "#0f0f0f",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    backgroundColor: "#fdf8ec",
     borderWidth: 1,
-    borderColor: "#1a1a1a",
-    borderRadius: 12,
-    overflow: "hidden",
+    borderColor: "#e6dcc8",
+    borderRadius: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  rowStripe: { width: 4 },
-  rowBody: { flex: 1, padding: 13, gap: 8 },
+  rowIndicator: { width: 4, height: 56, borderRadius: 2 },
+  rowBody: { flex: 1, gap: 8 },
   rowTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  rowName: { color: "#fff", fontSize: 15, fontWeight: "800", textAlign: "right" },
-  rowAgo: { color: "#6b7280", fontSize: 11 },
+  rowName: { color: "#3d3424", fontSize: 15, fontWeight: "800", textAlign: "right" },
+  rowAgo: { color: "#9a917f", fontSize: 11 },
   rowZoneWrap: { gap: 4, alignItems: "flex-end" },
-  rowReason: { color: "#d1d5db", fontSize: 13, lineHeight: 19, textAlign: "right" },
+  rowReason: { color: "#2f2a22", fontSize: 13, lineHeight: 19, textAlign: "right" },
   rowZone: { flexDirection: "row", alignItems: "center", gap: 4 },
-  rowZoneText: { color: "#9ca3af", fontSize: 12 },
+  rowZoneText: { color: "#6b6457", fontSize: 12 },
   newPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -358,14 +367,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 5,
     alignSelf: "flex-start",
-    backgroundColor: "#0f1f12",
+    backgroundColor: "#dcfce7",
     borderWidth: 1,
-    borderColor: "#14532d",
+    borderColor: "#bbf7d0",
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  enrouteText: { color: "#86efac", fontSize: 11, fontWeight: "700" },
+  enrouteText: { color: "#15803d", fontSize: 11, fontWeight: "700" },
 
   // modal
   modalBackdrop: {
@@ -374,11 +383,11 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: "#141414",
+    backgroundColor: "#fdf8ec",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: 1,
-    borderColor: "#262626",
+    borderColor: "#e6dcc8",
     padding: 22,
     paddingBottom: 34,
     alignItems: "flex-end",
@@ -396,18 +405,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   sheetTagText: { fontSize: 12, fontWeight: "800" },
-  sheetName: { color: "#fff", fontSize: 22, fontWeight: "800", textAlign: "right" },
-  sheetMeta: { color: "#9ca3af", fontSize: 13, textAlign: "right" },
+  sheetName: { color: "#3d3424", fontSize: 22, fontWeight: "800", textAlign: "right" },
+  sheetMeta: { color: "#6b6457", fontSize: 13, textAlign: "right" },
   sheetMsg: {
     alignSelf: "stretch",
-    backgroundColor: "#1c1410",
+    backgroundColor: "#fdf0e2",
     borderWidth: 1,
-    borderColor: "#7c2d12",
+    borderColor: "#fad4b3",
     borderRadius: 12,
     padding: 13,
     marginTop: 10,
   },
-  sheetMsgText: { color: "#fed7aa", fontSize: 14, lineHeight: 21, textAlign: "right" },
+  sheetMsgText: { color: "#9a3412", fontSize: 14, lineHeight: 21, textAlign: "right" },
   sheetInfoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -416,7 +425,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
     marginTop: 8,
   },
-  sheetInfoText: { color: "#e5e7eb", fontSize: 13, textAlign: "right" },
+  sheetInfoText: { color: "#3f3a30", fontSize: 13, textAlign: "right" },
 
   acceptBtn: {
     alignSelf: "stretch",
@@ -430,12 +439,12 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   acceptBtnDone: {
-    backgroundColor: "#0f1f12",
+    backgroundColor: "#dcfce7",
     borderWidth: 1,
-    borderColor: "#14532d",
+    borderColor: "#bbf7d0",
   },
-  acceptText: { color: "#fff", fontSize: 15, fontWeight: "800" },
-  acceptDoneText: { color: "#86efac", fontSize: 15, fontWeight: "800" },
+  acceptText: { color: "#fdf8ec", fontSize: 15, fontWeight: "800" },
+  acceptDoneText: { color: "#15803d", fontSize: 15, fontWeight: "800" },
 
   locateBtn: {
     alignSelf: "stretch",
@@ -443,9 +452,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#e6dcc8",
     borderWidth: 1,
-    borderColor: "#262626",
+    borderColor: "#e6dcc8",
     borderRadius: 14,
     paddingVertical: 13,
     marginTop: 10,

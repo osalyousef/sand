@@ -68,7 +68,7 @@ export default function Scan() {
             <Text style={styles.permBtnText}>منح الإذن</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.demoBtnAlt} onPress={demoScan}>
-            <Zap color="#fff" size={16} />
+            <Zap color="#3d3424" size={16} />
             <Text style={styles.demoBtnText}>محاكاة مسح للعرض</Text>
           </TouchableOpacity>
         </View>
@@ -112,12 +112,12 @@ export default function Scan() {
               style={styles.resetBtn}
               onPress={() => setScanned(false)}
             >
-              <RefreshCw color="#fff" size={16} />
+              <RefreshCw color="#3d3424" size={16} />
               <Text style={styles.resetText}>مسح مرة أخرى</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.demoBtn} onPress={demoScan}>
-            <Zap color="#0d0d0d" size={16} />
+            <Zap color="#f7f0e1" size={16} />
             <Text style={styles.demoBtnTextDark}>محاكاة مسح للعرض</Text>
           </TouchableOpacity>
         </View>
@@ -127,12 +127,12 @@ export default function Scan() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#0d0d0d" },
+  safe: { flex: 1, backgroundColor: "#f7f0e1" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 12 },
 
   // permission
-  permTitle: { color: "#fff", fontSize: 20, fontWeight: "800", marginTop: 12 },
-  permBody: { color: "#9ca3af", fontSize: 14, textAlign: "center", lineHeight: 20 },
+  permTitle: { color: "#3d3424", fontSize: 20, fontWeight: "800", marginTop: 12 },
+  permBody: { color: "#6b6457", fontSize: 14, textAlign: "center", lineHeight: 20 },
   permBtn: {
     backgroundColor: "#f97316",
     paddingHorizontal: 24,
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 8,
   },
-  permBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  permBtnText: { color: "#3d3424", fontWeight: "700", fontSize: 15 },
 
   // overlay
   overlay: {
@@ -154,8 +154,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  title: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  subtitle: { color: "#e5e7eb", fontSize: 13 },
+  title: { color: "#3d3424", fontSize: 20, fontWeight: "800" },
+  subtitle: { color: "#3f3a30", fontSize: 13 },
 
   reticleWrap: {
     alignItems: "center",
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   resetBtn: {
     backgroundColor: "rgba(0,0,0,0.6)",
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: "#cbbfa8",
     borderRadius: 10,
     paddingVertical: 12,
     flexDirection: "row",
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  resetText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  resetText: { color: "#3d3424", fontWeight: "700", fontSize: 14 },
   demoBtn: {
     backgroundColor: "#f97316",
     borderRadius: 10,
@@ -203,12 +203,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
   },
-  demoBtnTextDark: { color: "#0d0d0d", fontWeight: "800", fontSize: 15 },
+  demoBtnTextDark: { color: "#f7f0e1", fontWeight: "800", fontSize: 15 },
   demoBtnAlt: {
     marginTop: 6,
-    backgroundColor: "#1f2937",
+    backgroundColor: "#e6dcc8",
     borderWidth: 1,
-    borderColor: "#374151",
+    borderColor: "#cbbfa8",
     borderRadius: 10,
     paddingHorizontal: 18,
     paddingVertical: 12,
@@ -216,5 +216,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  demoBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  demoBtnText: { color: "#3d3424", fontWeight: "700", fontSize: 14 },
 });
