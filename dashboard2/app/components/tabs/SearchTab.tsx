@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Search, CheckCircle2 } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Search, CheckCircle2, Cloud } from "lucide-react";
 import { MOCK_PILGRIMS } from "@/lib/mock-data";
 import type { MockPilgrim } from "@/lib/mock-data";
 import { RISK_COLORS, type RiskLevel } from "@/lib/types";
 import { RECOVERED_IDS } from "@/lib/ops-data";
+import { fetchRemotePilgrims, remoteToMockPilgrim } from "@/lib/health-platform";
 import PilgrimDetail from "@/app/components/search/PilgrimDetail";
 
 type Filter = "all" | RiskLevel | "recovered";
@@ -22,10 +23,28 @@ export default function SearchTab() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<MockPilgrim | null>(null);
+  // Real pilgrims pulled live from the Hajj Health Platform (Django backend).
+  // They sit ABOVE the mock roster so the operator sees the same records the
+  // mobile app reads. Empty when the backend is offline — dashboard still works.
+  const [remote, setRemote] = useState<MockPilgrim[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetchRemotePilgrims()
+      .then(list => { if (active) setRemote(list.map(remoteToMockPilgrim)); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  // Backend records first, then mock — de-duped by id (backend wins).
+  const roster = useMemo(() => {
+    const ids = new Set(remote.map(p => p.id));
+    return [...remote, ...MOCK_PILGRIMS.filter(p => !ids.has(p.id))];
+  }, [remote]);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return MOCK_PILGRIMS.filter(p => {
+    return roster.filter(p => {
       if (filter === "recovered" && !RECOVERED_IDS.has(p.id)) return false;
       if ((filter === "red" || filter === "yellow" || filter === "green") && p.riskLevel !== filter) return false;
       if (!q) return true;
@@ -36,7 +55,7 @@ export default function SearchTab() {
         p.nationality.toLowerCase().includes(q)
       );
     });
-  }, [query, filter]);
+  }, [query, filter, roster]);
 
   return (
     <div className="flex gap-3 h-full">
@@ -71,7 +90,14 @@ export default function SearchTab() {
               </button>
             ))}
           </div>
-          <p className="text-gray-500 text-[10px] mt-2">{results.length} نتيجة</p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-gray-500 text-[10px]">{results.length} نتيجة</p>
+            {remote.length > 0 && (
+              <span className="flex items-center gap-1 text-[10px] text-sky-400" data-tip="سجلات حية من المنصة الصحية">
+                <Cloud className="w-3 h-3" /> {remote.length} من المنصة
+              </span>
+            )}
+          </div>
         </div>
 
         {/* List */}
@@ -92,7 +118,10 @@ export default function SearchTab() {
                 >
                   <span className="text-xl">{p.nationalityFlag}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-white text-xs font-medium truncate">{p.name}</p>
+                    <p className="text-white text-xs font-medium truncate flex items-center gap-1.5">
+                      {p.name}
+                      {p.fromPlatform && <Cloud className="w-3 h-3 text-sky-400 shrink-0" data-tip="سجل من المنصة الصحية" />}
+                    </p>
                     <p className="text-gray-500 text-[10px]">{p.id} · {p.nationality}</p>
                   </div>
                   {recovered ? (

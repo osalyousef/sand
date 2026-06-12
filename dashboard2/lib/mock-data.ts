@@ -37,6 +37,14 @@ export interface MockPilgrim {
   alertTime?: string;
   lastUpdate: string;
   alertHistory: AlertHistoryEntry[];
+  // Set on records sourced live from the Hajj Health Platform (Django backend).
+  // The medical fields above are real; vitals/GPS are demo stand-ins. See
+  // lib/health-platform.ts.
+  fromPlatform?: boolean;
+  profileStatus?: string;
+  confidenceScore?: number;
+  allergies?: string;
+  vaccinations?: string;
 }
 
 export interface MockTeam {

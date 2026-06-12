@@ -5,14 +5,15 @@ import type { LucideIcon } from "lucide-react";
 import {
   Heart, Thermometer, Wind, AlertTriangle, Pill, Map, Ambulance,
   History, CheckCircle2, Copy, Check, PhoneCall, Stethoscope,
-  Building2, FileCheck2, HeartPulse, Bot, RefreshCw, Sparkles,
+  Building2, FileCheck2, HeartPulse, Bot, RefreshCw, Sparkles, Activity,
 } from "lucide-react";
 import type { MockPilgrim } from "@/lib/mock-data";
-import { RISK_COLORS } from "@/lib/types";
+import { RISK_COLORS, type RiskLevel } from "@/lib/types";
 import {
   getTimeline, getDischarge, RECOVERED_IDS,
   type MedicalEvent, type MedicalEventType,
 } from "@/lib/ops-data";
+import { fetchTriage, type TriageResult } from "@/lib/health-platform";
 import { useSanadStore } from "@/lib/store";
 
 const RISK_LABEL = { red: "خطر", yellow: "تحذير", green: "آمن" };
@@ -49,8 +50,20 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
 
   useEffect(() => () => { if (genTimer.current) clearTimeout(genTimer.current); }, []);
 
+  // Real model-driven triage for platform-backed pilgrims. Overrides the
+  // heuristic risk badge with the XGBoost classification when it resolves.
+  const [triage, setTriage] = useState<TriageResult | null>(null);
+  useEffect(() => {
+    if (!pilgrim.fromPlatform) { setTriage(null); return; }
+    let active = true;
+    fetchTriage(pilgrim.id).then(t => { if (active) setTriage(t); }).catch(() => {});
+    return () => { active = false; };
+  }, [pilgrim.id, pilgrim.fromPlatform]);
+
   const wasRecovered = RECOVERED_IDS.has(pilgrim.id);
   const isRecovered = wasRecovered || justRecovered;
+  // Prefer the real model risk level when available.
+  const effectiveRisk: RiskLevel = triage?.risk_level ?? pilgrim.riskLevel;
   const discharge = useMemo(() => getDischarge(pilgrim), [pilgrim]);
   const timeline = useMemo(() => getTimeline(pilgrim), [pilgrim]);
 
@@ -105,10 +118,11 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
           </span>
         ) : (
           <span
-            className="text-xs px-3 py-1 rounded-full border font-semibold"
-            style={{ color: RISK_COLORS[pilgrim.riskLevel], borderColor: RISK_COLORS[pilgrim.riskLevel] }}
+            className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-semibold"
+            style={{ color: RISK_COLORS[effectiveRisk], borderColor: RISK_COLORS[effectiveRisk] }}
           >
-            {RISK_LABEL[pilgrim.riskLevel]}
+            {triage?.risk_level && <Activity className="w-3.5 h-3.5" data-tip="تصنيف نموذج الفرز الآلي" />}
+            {RISK_LABEL[effectiveRisk]}
           </span>
         )}
       </div>
@@ -198,6 +212,71 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
             <p className="text-gray-600 text-xs">لا توجد أدوية مسجلة</p>
           )}
         </InfoBlock>
+
+        {/* Platform record — real data fetched live from the health platform */}
+        {pilgrim.fromPlatform && (
+          <InfoBlock title="السجل الطبي من المنصة الصحية">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="flex items-center gap-1.5 text-[11px] text-sky-300">
+                <Bot className="w-3.5 h-3.5" /> مصدر السجل: المنصة الصحية
+              </span>
+              {pilgrim.profileStatus && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full border border-sky-800 bg-sky-900/30 text-sky-300">
+                  {pilgrim.profileStatus}
+                  {typeof pilgrim.confidenceScore === "number" && ` · ${pilgrim.confidenceScore}%`}
+                </span>
+              )}
+            </div>
+            <Info label="الحساسية" value={pilgrim.allergies?.trim() || "لا يوجد"} />
+            <Info label="التطعيمات" value={pilgrim.vaccinations?.trim() || "لا يوجد"} />
+          </InfoBlock>
+        )}
+
+        {/* AI triage — real XGBoost classification + SHAP risk factors */}
+        {pilgrim.fromPlatform && triage?.risk_level && (
+          <section className="bg-gray-950 rounded-xl border p-4" style={{ borderColor: `${RISK_COLORS[effectiveRisk]}66` }}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="flex items-center gap-1.5 text-gray-300 text-xs font-medium">
+                <Activity className="w-3.5 h-3.5" style={{ color: RISK_COLORS[effectiveRisk] }} />
+                تصنيف الفرز الآلي
+                <span className="text-[10px] text-gray-600 font-normal">· نموذج XGBoost</span>
+              </h3>
+              <span
+                className="text-[11px] px-2.5 py-0.5 rounded-full border font-bold"
+                style={{ color: RISK_COLORS[effectiveRisk], borderColor: RISK_COLORS[effectiveRisk] }}
+              >
+                {RISK_LABEL[effectiveRisk]}
+              </span>
+            </div>
+
+            {triage.primary_risk_factors && triage.primary_risk_factors.length > 0 ? (
+              <div>
+                <p className="text-[10px] text-gray-500 mb-2 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-amber-400" /> أبرز عوامل الخطورة (تفسير SHAP)
+                </p>
+                <ul className="space-y-1.5">
+                  {triage.primary_risk_factors.map((f, i) => (
+                    <li key={i} className="flex items-center justify-between text-xs bg-gray-900 rounded-lg px-3 py-1.5 border border-gray-800">
+                      <span className="text-gray-300">{f.feature}</span>
+                      <span className="font-mono text-amber-300" dir="ltr">{String(f.value)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <p className="text-gray-600 text-xs">لا توجد عوامل خطورة بارزة — الحالة ضمن النطاق الآمن.</p>
+            )}
+
+            {triage.vitals && (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-gray-800">
+                {triage.vitals.Blood_Pressure && <Info label="ضغط الدم" value={triage.vitals.Blood_Pressure} mono />}
+                {triage.vitals.CVD_Risk_Percentage && <Info label="خطر القلب والأوعية" value={triage.vitals.CVD_Risk_Percentage} mono />}
+                {typeof triage.vitals.BMI === "number" && <Info label="مؤشر كتلة الجسم" value={String(triage.vitals.BMI)} mono />}
+                {triage.vitals.Cholesterol && <Info label="الكوليسترول" value={triage.vitals.Cholesterol} mono />}
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Location + copy GPS */}
         <InfoBlock title="الموقع الحالي">

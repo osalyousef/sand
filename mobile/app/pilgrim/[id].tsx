@@ -7,9 +7,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronRight, Activity, Phone, MapPin } from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { ChevronRight, Activity, Phone, MapPin, Sparkles } from "lucide-react-native";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 import type { ScannedPilgrim } from "@/lib/scanned-store";
+import { fetchTriage, type TriageResult } from "@/lib/health-platform";
 
 function riskLabel(level: RiskLevel) {
   return level === "red" ? "حرج" : level === "yellow" ? "عالٍ" : "منخفض";
@@ -40,7 +42,19 @@ export default function PilgrimDetail() {
 
   const entry: ScannedPilgrim = JSON.parse(data);
   const { pilgrim, vitals, risk } = entry;
-  const riskColor = RISK_COLORS[risk.risk_level];
+
+  // Real model-driven triage from the platform. Bracelet records have no
+  // feature vector (→ insufficient_data) so this simply stays null for them and
+  // the local bracelet risk is used unchanged.
+  const [triage, setTriage] = useState<TriageResult | null>(null);
+  useEffect(() => {
+    let active = true;
+    fetchTriage(pilgrim.id).then((t) => { if (active) setTriage(t); }).catch(() => {});
+    return () => { active = false; };
+  }, [pilgrim.id]);
+
+  const effectiveRisk: RiskLevel = triage?.risk_level ?? risk.risk_level;
+  const riskColor = RISK_COLORS[effectiveRisk];
 
   const conditions = [
     pilgrim.has_heart_condition ? "قصور قلبي مزمن" : null,
@@ -72,9 +86,11 @@ export default function PilgrimDetail() {
           <View style={styles.identityTop}>
             <View style={[styles.riskBadge, { borderColor: riskColor }]}>
               <Text style={[styles.riskBadgeText, { color: riskColor }]}>
-                {riskLabel(risk.risk_level)}
+                {riskLabel(effectiveRisk)}
               </Text>
-              <Text style={styles.riskCritical}>CRITICAL</Text>
+              <Text style={styles.riskCritical}>
+                {triage?.risk_level ? "AI TRIAGE" : "CRITICAL"}
+              </Text>
             </View>
             <Activity color={riskColor} size={20} />
           </View>
@@ -107,6 +123,36 @@ export default function PilgrimDetail() {
             />
           </View>
         </View>
+
+        {/* AI triage — real XGBoost classification + SHAP risk factors */}
+        {triage?.risk_level && (
+          <View style={[styles.section, { borderColor: `${riskColor}55`, borderWidth: 1 }]}>
+            <View style={styles.triageHeader}>
+              <Text style={styles.sectionTitle}>تصنيف الفرز الآلي · XGBoost</Text>
+              <View style={[styles.triagePill, { borderColor: riskColor }]}>
+                <Text style={[styles.triagePillText, { color: riskColor }]}>
+                  {riskLabel(triage.risk_level)}
+                </Text>
+              </View>
+            </View>
+            {triage.primary_risk_factors && triage.primary_risk_factors.length > 0 ? (
+              <>
+                <View style={styles.shapLabelRow}>
+                  <Sparkles color="#d9a441" size={12} />
+                  <Text style={styles.shapLabel}>أبرز عوامل الخطورة (SHAP)</Text>
+                </View>
+                {triage.primary_risk_factors.map((f, i) => (
+                  <View key={i} style={styles.shapRow}>
+                    <Text style={styles.shapValue}>{String(f.value)}</Text>
+                    <Text style={styles.shapFeature}>{f.feature}</Text>
+                  </View>
+                ))}
+              </>
+            ) : (
+              <Text style={styles.listItemText}>لا توجد عوامل خطورة بارزة — ضمن النطاق الآمن.</Text>
+            )}
+          </View>
+        )}
 
         {/* conditions */}
         {conditions.length > 0 && (
@@ -253,6 +299,37 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: "#cbbfa8",
   },
+
+  // triage
+  triageHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  triagePill: {
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  triagePillText: { fontSize: 12, fontWeight: "800" },
+  shapLabelRow: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: 5,
+  },
+  shapLabel: { color: "#9a917f", fontSize: 12, textAlign: "right" },
+  shapRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#f7f0e1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  shapValue: { color: "#b8860b", fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  shapFeature: { color: "#2f2a22", fontSize: 13, textAlign: "right" },
 
   // cta
   ctaContainer: {

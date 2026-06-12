@@ -3,6 +3,8 @@
 // We fetch the unified medical history for that id and overlay it onto the
 // live record (vitals + risk stay local — they come from the bracelet).
 
+import type { RiskLevel } from "@/types";
+
 const HP_URL = process.env.EXPO_PUBLIC_HEALTH_PLATFORM_URL || null;
 
 export interface RemoteHealthProfile {
@@ -40,6 +42,44 @@ export async function fetchRemotePilgrim(
     return (await res.json()) as RemotePilgrim;
   } catch {
     return null; // unreachable backend → fall back
+  }
+}
+
+// ─── triage (real XGBoost risk from the platform) ──────────────────────────
+
+export interface TriageRiskFactor {
+  feature: string;
+  value: string | number;
+}
+
+export interface TriageResult {
+  status: string; // Green | Orange | Red | insufficient_data | triage_failed
+  risk_level: RiskLevel | null;
+  vitals?: {
+    CVD_Risk_Percentage?: string;
+    Age?: number | null;
+    BMI?: number | null;
+    Blood_Pressure?: string;
+    Cholesterol?: string;
+  };
+  known_conditions?: string[];
+  primary_risk_factors?: TriageRiskFactor[];
+}
+
+/** Fetch the real model-driven triage for a pilgrim id (== QR payload). Returns
+ *  null when the platform is unconfigured/unreachable; the in-band statuses
+ *  `insufficient_data` / `triage_failed` mean the pilgrim has no feature vector
+ *  (e.g. a bracelet record) or the model errored. */
+export async function fetchTriage(patientId: string): Promise<TriageResult | null> {
+  if (!HP_URL) return null;
+  try {
+    const res = await fetch(
+      `${HP_URL}/api/pilgrims/${encodeURIComponent(patientId)}/triage/`,
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as TriageResult;
+  } catch {
+    return null;
   }
 }
 
