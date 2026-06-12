@@ -5,6 +5,7 @@
 // Design rule across the whole product: the agent SUGGESTS, a human APPROVES.
 
 import type { MockContact } from "./mock-data";
+import { CURRENT_SHIFT, RECOVERY_STATS, TEAM_HOURS } from "./ops-data";
 
 /* ================= Agent identities =================
  * Every copilot has a name and a clear role, so staff know exactly
@@ -17,6 +18,7 @@ export const AGENTS = {
   prediction: { name: "بصير",   role: "وكيل التنبؤ" },      // map +4h forecast layer
   triage:     { name: "فارز",   role: "وكيل الفرز" },       // hotline queue ordering
   discharge:  { name: "موثِّق", role: "وكيل التوثيق" },     // discharge summary drafting
+  handoff:    { name: "مُسلِّم", role: "وكيل التسليم" },     // shift-handoff report drafting
 } as const;
 
 /* ================= «مُغيث» Response Agent (hotline) =================
@@ -249,6 +251,39 @@ export const OPS_INSIGHTS: OpsInsight[] = [
     confidence: 83, timeLabel: "بعد المغرب",
   },
 ];
+
+/* ================= «مُسلِّم» Handoff Agent (shift change) =================
+ * Compiles the shift's events into a structured handoff briefing: outcomes,
+ * ongoing risks, team fatigue, and opening recommendations for the next
+ * shift. The outgoing supervisor reviews, edits, and approves before it's
+ * delivered — nothing is handed over unread.
+ */
+export function buildHandoffReport(variant = 0): string {
+  const fatigued = Object.entries(TEAM_HOURS)
+    .filter(([, h]) => h >= 9)
+    .map(([id]) => id);
+  const delta = RECOVERY_STATS.today - RECOVERY_STATS.yesterday;
+
+  if (variant % 2 === 0) {
+    return [
+      `تقرير تسليم — ${CURRENT_SHIFT.name} (${CURRENT_SHIFT.start} → ${CURRENT_SHIFT.end}) · المشرف: ${CURRENT_SHIFT.supervisor}`,
+      ``,
+      `• الحصيلة: ${RECOVERY_STATS.today} حالة حُلّت (${delta >= 0 ? "+" : ""}${delta} عن الأمس) — متوسط استجابة 1m 24s (تحسن ١٢٪).`,
+      `• أعلى ضغط: الجمرات — تركّز حرج للإجهاد الحراري وعيادات الجمرات ممتلئة؛ التحويل القائم إلى المستشفى الميداني بمنى.`,
+      `• مخاطر مستمرة: مخيم C3 (عطل تكييف — توقع +٤٠٪ حالات خلال ساعتين)، مخزون محاليل الوحدة م٢ منخفض (تزويد مطلوب قبل ١٦:٠٠).`,
+      `• الفرق: ${fatigued.length > 0 ? `فريق التدخل السريع تجاوز ١١ ساعة — يُستبدل فور بداية الوردية` : "جميع الفرق ضمن نطاق الإجهاد الآمن"}؛ بقية الفرق ضمن النطاق.`,
+      `• توصية الافتتاح: تمركز مبكر لوحدة تبريد عند مخرج جسر الجمرات قبل ذروة الحر ١٥:٠٠–١٧:٠٠.`,
+    ].join("\n");
+  }
+  return [
+    `موجز تسليم ${CURRENT_SHIFT.name} — يعتمده ${CURRENT_SHIFT.supervisor}`,
+    ``,
+    `• أُغلقت ${RECOVERY_STATS.today} حالة هذه الوردية مقابل ${RECOVERY_STATS.yesterday} أمس، وزمن الاستجابة في تحسّن.`,
+    `• الملف الأهم للوردية القادمة: بؤرة الجمرات (عيادات ممتلئة → حوّلوا لميداني منى) ومخيم C3 المرشح للتصاعد بسبب عطل التكييف.`,
+    `• لوجستيات عاجلة: محاليل وريدية للوحدة م٢ قبل ١٦:٠٠.`,
+    `• إدارة الطاقم: استبدال فريق التدخل السريع أولوية أولى (إجهاد ١١ س)، والاستفادة من هدوء عرفات المتوقع بعد المغرب لإراحة الفرق بالتناوب.`,
+  ].join("\n");
+}
 
 /* ================= Routing Agent (map cells) =================
  * Click a hot cell → where should these cases go, with how many teams?

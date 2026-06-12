@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# سند (Sanad) — Hajj Health Command Center
 
-## Getting Started
+مركز قيادة ذكي لصحة الحجاج، مبني لوزارة الحج والعمرة. يراقب المؤشرات الحيوية لملايين الحجاج، يدير الاستجابة الطبية الميدانية، ويشغّل خطاً ساخناً متعدد اللغات — بمساعدة **سبعة وكلاء ذكاء اصطناعي** يقترحون والإنسان يعتمد.
 
-First, run the development server:
+> AI-powered health command center for Hajj pilgrims — built for the Saudi Ministry of Hajj and Umrah. Live geo-command, multilingual crisis hotline, health institutions network, and a 7-agent AI copilot layer where **the agent suggests and a human approves**.
+
+## التشغيل
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev      # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+لا يحتاج أي مفاتيح — كل البيانات محاكاة محلية حتمية (seeded). متغيرات Supabase اختيارية لاحقاً في `.env.local`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## التبويبات
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| التبويب | المحتوى |
+|---|---|
+| **مباشر** | خريطة حرارية (شبكة ١٠٠م×١٠٠م) لمنى/عرفات، شريط بيئي (حرارة محسوسة، UV، كثافة حشود)، تنبيهات بدورة حياة كاملة (جديد→إرسال→علاج→حل/نقل)، لوحة فرق بمؤشر إجهاد |
+| **الخط الساخن** | مكالمات ومحادثات بترجمة فورية، طابور بمؤقتات SLA حية (تحمرّ بعد دقيقتين)، بطاقة صحية مدمجة في الجلسة |
+| **المنشآت الصحية** | ٧ منشآت بالسعة والتخصصات وزمن الوصول، ملخص إشغال الشبكة |
+| **البحث** | سجل الحاج: مؤشرات حيوية، سجل طبي زمني، تدفق التعافي والخروج |
+| **البيانات** | عداد المتعافين، رسم تفاعلي ٢٤ ساعة، إدارة الورديات، تصدير تقرير يومي PDF |
 
-## Learn More
+## الوكلاء السبعة
 
-To learn more about Next.js, take a look at the following resources:
+كل الوكلاء يعيشون في [`lib/agents.ts`](lib/agents.ts) — **نقطة الربط الوحيدة** مع باك-إند FastAPI/LLM عند جهوزه. القاعدة المشتركة: الوكيل يقترح ويُظهر سببه ونسبة ثقته، ولا يُنفَّذ شيء إلا بموافقة بشرية موثقة.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| الوكيل | الدور | المكان |
+|---|---|---|
+| **مُغيث** | وكيل الاستجابة | المكالمات/المحادثات: تشخيص مبدئي → توجيه فوري يُبث صوتياً بلغة الحاج → أسئلة فرز → موجز منظم للفريق المستجيب |
+| **راصد** | وكيل العمليات | الشاشة المباشرة: تركّزات، تنبؤات، نقص إمدادات، أنماط شاذة — بنسب ثقة |
+| **دليل** | وكيل التوجيه | خلايا الخريطة: كم فريق وإلى أي مستشفى (يراعي الامتلاء) |
+| **بصير** | وكيل التنبؤ | طبقة "متوقع +٤ ساعات" على الخريطة |
+| **فارز** | وكيل الفرز | ترتيب طابور الخط الساخن (الخطورة × الانتظار) |
+| **موثِّق** | وكيل التوثيق | يصيغ ملخص الخروج، الطبيب يعدّل ويعتمد، والاسمان يوثَّقان |
+| **مُسلِّم** | وكيل التسليم | يصيغ تقرير تسليم الوردية تلقائياً قبل موعدها، المشرف يعدّل/يضيف ثم يعتمد |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## البنية
 
-## Deploy on Vercel
+```
+app/
+  components/
+    agent/        بطاقة اقتراحات مُغيث (تشخيص → توجيه → أسئلة → موجز)
+    live/         الخريطة، التنبيهات، الفرق، الشريط البيئي
+    hotline/      المكالمة، المحادثة، الطابور، البطاقة الصحية
+    search/       ملف الحاج + السجل الزمني + تدفق التعافي
+    data/         المؤشرات، الورديات (مُسلِّم)، الموارد
+    tabs/         تركيب التبويبات الخمسة
+  hooks/useTheme  تبديل داكن/فاتح (نمط نسك) محفوظ في localStorage
+lib/
+  agents.ts       🧠 عقول الوكلاء السبعة — نقطة استبدال الـLLM
+  store.ts        مخزن zustand مشترك: دورة التنبيهات، الفرق، التنقل، تركيز الخريطة
+  ops-data.ts     بيانات العمليات: منشآت، ورديات، بيئة، سجلات زمنية
+  mock-data.ts    ٤٠ حاجاً ببيانات حتمية (seeded RNG — لا أخطاء hydration)
+  daily-report.ts تقرير PDF يومي (نافذة طباعة RTL)
+  ai.ts           عميل FastAPI للتنبؤ بالخطورة (mock حالياً)
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## نقاط الربط بالباك-إند
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| الملف | استبدل | بـ |
+|---|---|---|
+| `lib/agents.ts` | الدوال الحتمية | نداءات LLM (التشخيص، الرؤى، التقارير) |
+| `lib/ai.ts` | الاستجابة الثابتة | `POST {AI_URL}/predict` |
+| `lib/mock-data.ts` | المصفوفات | جداول Supabase + realtime |
+
+## التقنيات
+
+Next.js 16 · React 19 · TypeScript · Tailwind 4 (تيمات عبر CSS variables — الوضع الفاتح "نسك" بدون لمس المكونات) · Leaflet + CARTO basemaps · zustand · lucide-react
+
+---
+وزارة الحج والعمرة · سند v1.0

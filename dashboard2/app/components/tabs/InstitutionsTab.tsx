@@ -15,6 +15,7 @@ import {
   type Institution,
   type InstitutionType,
 } from "@/lib/ops-data";
+import { useSanadStore } from "@/lib/store";
 
 const TYPE_ICON: Record<InstitutionType, LucideIcon> = {
   hospital: Hospital,
@@ -105,6 +106,7 @@ export default function InstitutionsTab() {
 
 function InstitutionCard({ inst }: { inst: Institution }) {
   const [copied, setCopied] = useState(false);
+  const focusOnPoint = useSanadStore(s => s.focusOnPoint);
   const pct = occupancyPct(inst);
   const color = occupancyColor(pct);
   const meta = INSTITUTION_STATUS_META[inst.status];
@@ -185,7 +187,8 @@ function InstitutionCard({ inst }: { inst: Institution }) {
           <Phone className="w-3.5 h-3.5" /> {copied ? "تم النسخ ✓" : "اتصال"}
         </button>
         <button
-          data-tip="عرض موقع المنشأة على خريطة القيادة"
+          onClick={() => focusOnPoint({ lat: inst.lat, lng: inst.lng, label: inst.name })}
+          data-tip="ينقلك للشاشة المباشرة والخريطة تطير للمنشأة"
           className="flex-1 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
         >
           <MapPin className="w-3.5 h-3.5" /> على الخريطة

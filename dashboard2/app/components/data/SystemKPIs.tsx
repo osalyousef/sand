@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { HeartPulse } from "lucide-react";
+import { HeartPulse, FileDown } from "lucide-react";
 import { AI_KPIS, HOURLY_ALERTS } from "@/lib/mock-data";
 import { RECOVERY_STATS } from "@/lib/ops-data";
+import { exportDailyReport } from "@/lib/daily-report";
 
 const AR_HOURS = ["٠٠", "٠١", "٠٢", "٠٣", "٠٤", "٠٥", "٠٦", "٠٧", "٠٨", "٠٩", "١٠", "١١", "١٢", "١٣", "١٤", "١٥", "١٦", "١٧", "١٨", "١٩", "٢٠", "٢١", "٢٢", "٢٣"];
 
@@ -15,6 +16,20 @@ export default function SystemKPIs() {
 
   return (
     <div className="flex-1 flex flex-col gap-3">
+      {/* Daily report export */}
+      <div className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl px-4 py-2">
+        <span className="text-[11px] text-gray-400">
+          تقرير العمليات اليومي — المؤشرات والمنشآت ورؤى الوكلاء وموجز الوردية
+        </span>
+        <button
+          onClick={exportDailyReport}
+          data-tip="يفتح نسخة للطباعة — احفظها PDF من نافذة الطباعة"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-colors shrink-0"
+        >
+          <FileDown className="w-3.5 h-3.5" /> تصدير PDF
+        </button>
+      </div>
+
       {/* Recovered today — the number that matters most */}
       <div className="flex items-center justify-between bg-emerald-900/20 border border-emerald-800 rounded-xl px-5 py-3">
         <div className="flex items-center gap-3">

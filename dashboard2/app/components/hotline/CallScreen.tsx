@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mic, MicOff, Volume2, Ambulance, PhoneOff, UserRound } from "lucide-react";
+import { Mic, MicOff, Volume2, Ambulance, PhoneOff, UserRound, MapPin } from "lucide-react";
 import type { MockContact } from "@/lib/mock-data";
 import HealthSnapshot from "./HealthSnapshot";
 import AgentSuggestionCard from "@/app/components/agent/AgentSuggestionCard";
+import { useSanadStore } from "@/lib/store";
 
 const RISK_RING = { red: "ring-red-600", yellow: "ring-yellow-600", green: "ring-emerald-600" };
 
 export default function CallScreen({ contact, onViewProfile }: { contact: MockContact; onViewProfile: () => void }) {
   const [seconds, setSeconds] = useState(0);
   const [muted, setMuted] = useState(false);
+  const focusOnMap = useSanadStore(s => s.focusOnMap);
 
   // Call timer — resets when a new call is answered
   useEffect(() => {
@@ -32,6 +34,13 @@ export default function CallScreen({ contact, onViewProfile }: { contact: MockCo
           مكالمة جارية
         </span>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => focusOnMap(contact.pilgrimId)}
+            data-tip="فتح موقع الحاج على الخريطة الحية"
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-blue-900/50 hover:bg-blue-900/80 border border-blue-800 text-blue-300 rounded-lg transition-colors"
+          >
+            <MapPin className="w-3.5 h-3.5" /> موقع الحاج
+          </button>
           <button
             onClick={onViewProfile}
             className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors"

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MapPin, Route, BatteryLow, RefreshCw } from "lucide-react";
 import { MOCK_TEAMS, MOCK_ALERTS } from "@/lib/mock-data";
 import { CURRENT_SHIFT, TEAM_HOURS, fatigueColor } from "@/lib/ops-data";
+import { useSanadStore, pilgrimById } from "@/lib/store";
 
 const STATUS_STYLES = {
   available: { dot: "bg-emerald-500", text: "text-emerald-400", bg: "bg-emerald-900/30 border-emerald-800", label: "متاح" },
@@ -13,10 +14,12 @@ const STATUS_STYLES = {
 
 export default function TeamsPanel() {
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [assignments, setAssignments] = useState<Record<string, string | undefined>>(
-    Object.fromEntries(MOCK_TEAMS.map(t => [t.id, t.assignedAlert]))
-  );
   const [reassigning, setReassigning] = useState<string | null>(null);
+
+  // Shared state: dispatches from alerts/hotline/search land here live
+  const teamStatuses = useSanadStore(s => s.teamStatuses);
+  const assignments = useSanadStore(s => s.teamAssignments);
+  const reassignTeam = useSanadStore(s => s.reassignTeam);
 
   return (
     <div className="w-64 flex flex-col bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
@@ -39,13 +42,12 @@ export default function TeamsPanel() {
 
       <div className="flex-1 overflow-y-auto divide-y divide-gray-800/60">
         {MOCK_TEAMS.map(team => {
-          const style = STATUS_STYLES[team.status];
+          const status = teamStatuses[team.id] ?? team.status;
+          const style = STATUS_STYLES[status];
           const isExpanded = expanded === team.id;
           const hours = TEAM_HOURS[team.id] ?? 0;
           const fatigued = hours >= 9;
-          const assignedAlert = assignments[team.id]
-            ? MOCK_ALERTS.find(a => a.id === assignments[team.id])
-            : null;
+          const assignedPilgrim = assignments[team.id] ? pilgrimById(assignments[team.id]!) : null;
 
           return (
             <div
@@ -85,17 +87,25 @@ export default function TeamsPanel() {
 
               {isExpanded && (
                 <div className="mt-3 pt-3 border-t border-gray-700 space-y-2 text-[10px]" onClick={e => e.stopPropagation()}>
-                  {assignedAlert ? (
+                  {assignedPilgrim ? (
                     <div className="bg-gray-900 rounded-lg p-2 space-y-1">
                       <div className="text-gray-500">مُسند إلى:</div>
-                      <div className="text-white font-medium">{assignedAlert.name}</div>
-                      <div className="text-gray-400">{assignedAlert.id} · {assignedAlert.condition ?? "لا توجد حالة موثقة"}</div>
+                      <div className="text-white font-medium">{assignedPilgrim.name}</div>
+                      <div className="text-gray-400">
+                        {assignedPilgrim.id} · {assignedPilgrim.condition ?? "لا توجد حالة موثقة"}
+                      </div>
+                    </div>
+                  ) : assignments[team.id] ? (
+                    // mission to a location (map cell / hotspot) rather than a pilgrim
+                    <div className="bg-gray-900 rounded-lg p-2 space-y-1">
+                      <div className="text-gray-500">مهمة ميدانية:</div>
+                      <div className="text-white font-medium">{assignments[team.id]}</div>
                     </div>
                   ) : (
                     <div className="text-gray-600 italic">لا توجد مهمة نشطة</div>
                   )}
 
-                  {team.status === "dispatched" && (
+                  {status === "dispatched" && (
                     <div className="flex items-center gap-1.5 bg-blue-900/40 text-blue-300 rounded-lg p-2 border border-blue-800">
                       <Route className="w-3 h-3" /> تم احتساب أقصر مسار · وقت الوصول ~٤ دقائق
                     </div>
@@ -111,7 +121,7 @@ export default function TeamsPanel() {
                           <button
                             key={a.id}
                             onClick={() => {
-                              setAssignments(prev => ({ ...prev, [team.id]: a.id }));
+                              reassignTeam(team.id, a.id);
                               setReassigning(null);
                             }}
                             className="w-full text-right px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
@@ -131,11 +141,6 @@ export default function TeamsPanel() {
                       >
                         <RefreshCw className="w-2.5 h-2.5" /> إعادة إسناد
                       </button>
-                      {team.status === "available" && (
-                        <button className="flex-1 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded text-[10px] transition-colors">
-                          إرسال
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
@@ -147,15 +152,21 @@ export default function TeamsPanel() {
 
       <div className="px-4 py-2 border-t border-gray-800 grid grid-cols-3 text-center text-[10px]">
         <div>
-          <div className="text-emerald-400 font-semibold">{MOCK_TEAMS.filter(t => t.status === "available").length}</div>
+          <div className="text-emerald-400 font-semibold">
+            {MOCK_TEAMS.filter(t => (teamStatuses[t.id] ?? t.status) === "available").length}
+          </div>
           <div className="text-gray-600">متاح</div>
         </div>
         <div>
-          <div className="text-yellow-400 font-semibold">{MOCK_TEAMS.filter(t => t.status === "dispatched").length}</div>
+          <div className="text-yellow-400 font-semibold">
+            {MOCK_TEAMS.filter(t => (teamStatuses[t.id] ?? t.status) === "dispatched").length}
+          </div>
           <div className="text-gray-600">في الطريق</div>
         </div>
         <div>
-          <div className="text-red-400 font-semibold">{MOCK_TEAMS.filter(t => t.status === "on-scene").length}</div>
+          <div className="text-red-400 font-semibold">
+            {MOCK_TEAMS.filter(t => (teamStatuses[t.id] ?? t.status) === "on-scene").length}
+          </div>
           <div className="text-gray-600">في الموقع</div>
         </div>
       </div>

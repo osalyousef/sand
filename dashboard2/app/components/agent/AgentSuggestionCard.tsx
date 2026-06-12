@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import type { MockContact } from "@/lib/mock-data";
 import { getContactSuggestion, AGENTS, type DiagnosisSeverity } from "@/lib/agents";
+import { useSanadStore } from "@/lib/store";
 
 const SEVERITY_STYLE: Record<DiagnosisSeverity, { box: string; title: string; chip: string; label: string }> = {
   critical: { box: "bg-red-500/10 border-red-500/50", title: "text-red-300", chip: "bg-red-500/15 border-red-500/50 text-red-400", label: "حرجة" },
@@ -37,9 +38,10 @@ export default function AgentSuggestionCard({
   const [text, setText] = useState(suggestion.guidance);
   const [replyState, setReplyState] = useState<SendState>("idle");
   const [questionStates, setQuestionStates] = useState<Record<number, SendState>>({});
-  const [actionDone, setActionDone] = useState(false);
+  const [dispatchedTeam, setDispatchedTeam] = useState<string | null>(null);
   const [briefSent, setBriefSent] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const dispatchForPilgrim = useSanadStore(s => s.dispatchForPilgrim);
 
   // New caller → fresh suggestion
   useEffect(() => {
@@ -48,7 +50,7 @@ export default function AgentSuggestionCard({
     setText(getContactSuggestion(contact).guidance);
     setReplyState("idle");
     setQuestionStates({});
-    setActionDone(false);
+    setDispatchedTeam(null);
     setBriefSent(false);
   }, [contact.id, contact]);
 
@@ -250,13 +252,17 @@ export default function AgentSuggestionCard({
           <p className="text-gray-200 text-xs font-medium">{suggestion.action.label}</p>
           <p className="text-gray-500 text-[10px] mt-0.5">{suggestion.action.detail}</p>
           <div className="mt-2">
-            {actionDone ? (
+            {dispatchedTeam ? (
               <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-                <Check className="w-3 h-3" /> تمت الموافقة — جارٍ التنفيذ
+                <Check className="w-3 h-3" />
+                {dispatchedTeam === "—"
+                  ? "تمت الموافقة — جارٍ التنفيذ"
+                  : `تمت الموافقة — أُسند ${dispatchedTeam} (شاهده في لوحة الفرق)`}
               </span>
             ) : (
               <button
-                onClick={() => setActionDone(true)}
+                onClick={() => setDispatchedTeam(dispatchForPilgrim(contact.pilgrimId) ?? "—")}
+                data-tip="يُسند أقرب فريق متاح ويُحدّث الشاشة المباشرة فوراً"
                 className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 bg-blue-900/50 hover:bg-blue-900/80 border border-blue-700 text-blue-300 rounded-md transition-colors"
               >
                 <Check className="w-3 h-3" /> موافقة وتنفيذ

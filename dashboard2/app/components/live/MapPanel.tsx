@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
-import { Zap, TrendingUp, Building2, Bot } from "lucide-react";
+import { Zap, TrendingUp, Building2, Bot, Crosshair, X } from "lucide-react";
 import { MOCK_PILGRIMS } from "@/lib/mock-data";
 import type { RiskLevel } from "@/lib/types";
 import { RISK_COLORS } from "@/lib/types";
 import type { SelectedCellInfo } from "@/lib/grid";
 import CellDetails from "./CellDetails";
+import { useSanadStore, pilgrimById } from "@/lib/store";
 
 // Leaflet touches window — never render it on the server.
 const LeafletMap = dynamic(() => import("./LeafletMap"), {
@@ -30,6 +31,13 @@ export default function MapPanel() {
   const [mode, setMode] = useState<"now" | "predicted">("now");
   const [showInstitutions, setShowInstitutions] = useState(true);
   const [selectedCell, setSelectedCell] = useState<SelectedCellInfo | null>(null);
+  const focusPilgrimId = useSanadStore(s => s.focusPilgrimId);
+  const focusPoint = useSanadStore(s => s.focusPoint);
+  const clearFocus = useSanadStore(s => s.clearFocus);
+  const focusedPilgrim = focusPilgrimId ? pilgrimById(focusPilgrimId) : null;
+  const focusLabel = focusedPilgrim
+    ? `${focusedPilgrim.name} · ${focusedPilgrim.id}`
+    : focusPoint?.label ?? null;
 
   function switchMode(next: "now" | "predicted") {
     setMode(next);
@@ -92,6 +100,22 @@ export default function MapPanel() {
         {/* Selected-cell details */}
         {selectedCell && (
           <CellDetails cell={selectedCell} onClose={() => setSelectedCell(null)} />
+        )}
+
+        {/* Focused target banner (pilgrim or institution) */}
+        {focusLabel && (
+          <div className="fade-in absolute top-3 left-1/2 -translate-x-1/2 z-[1000] flex items-center gap-2 bg-gray-950/90 border border-emerald-700 rounded-full px-3 py-1.5 backdrop-blur-sm">
+            <Crosshair className="w-3.5 h-3.5 text-emerald-400 badge-pulse" />
+            <span className="text-xs text-white font-medium">متابعة: {focusLabel}</span>
+            <button
+              onClick={clearFocus}
+              data-tip="إنهاء المتابعة"
+              className="text-gray-500 hover:text-white transition-colors"
+              aria-label="إنهاء المتابعة"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
         )}
 
         {/* Mode caption */}

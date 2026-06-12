@@ -1,12 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, ShieldAlert } from "lucide-react";
-import { CRITICAL_NOTIFICATIONS, INITIAL_ALERT_STATUS, ALERT_STATUS_META } from "@/lib/ops-data";
+import { Bell, ShieldAlert, Sun, Moon, ChevronLeft } from "lucide-react";
+import { MOCK_ALERTS } from "@/lib/mock-data";
+import { ALERT_STATUS_META } from "@/lib/ops-data";
+import { useSanadStore } from "@/lib/store";
+import { useTheme } from "@/app/hooks/useTheme";
 
 export default function Header() {
   const [time, setTime] = useState<Date | null>(null);
   const [open, setOpen] = useState(false);
+  const { light, toggle } = useTheme();
+  const alertStatuses = useSanadStore(s => s.alertStatuses);
+  const goToAlert = useSanadStore(s => s.goToAlert);
 
   useEffect(() => {
     setTime(new Date()); // first paint on client only — server has no stable clock
@@ -14,13 +20,17 @@ export default function Header() {
     return () => clearInterval(id);
   }, []);
 
-  const count = CRITICAL_NOTIFICATIONS.length;
+  // Live: unhandled criticals only — dispatching anywhere shrinks this badge
+  const notifications = MOCK_ALERTS.filter(
+    a => a.riskLevel === "red" && alertStatuses[a.id] === "new"
+  );
+  const count = notifications.length;
 
   return (
     <header className="relative flex items-center justify-between px-6 py-3 bg-gray-950 border-b border-gray-800">
       {/* Right: brand (RTL) */}
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-gray-950 font-bold text-base shadow-[0_0_18px_rgba(0,212,170,0.35)]">
+        <div className="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center text-white font-bold text-base shadow-[0_0_18px_rgba(0,212,170,0.35)]">
           س
         </div>
         <div>
@@ -29,8 +39,18 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Left: notifications + status + clock */}
+      {/* Left: theme + notifications + status + clock */}
       <div className="flex items-center gap-4">
+        {/* Theme toggle — dark command center ⇄ Nusuk light */}
+        <button
+          onClick={toggle}
+          data-tip={light ? "الوضع الداكن — غرفة القيادة" : "الوضع الفاتح — نمط نسك"}
+          className="w-9 h-9 rounded-lg bg-gray-900 border border-gray-800 hover:border-gray-700 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
+          aria-label="تبديل المظهر"
+        >
+          {light ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+        </button>
+
         {/* Global notification bell */}
         <div className="relative">
           <button
@@ -56,23 +76,35 @@ export default function Header() {
                   حالات حرجة بانتظار الإسناد
                 </div>
                 <div className="max-h-72 overflow-y-auto divide-y divide-gray-800/60">
-                  {CRITICAL_NOTIFICATIONS.length === 0 ? (
+                  {notifications.length === 0 ? (
                     <p className="text-gray-500 text-xs text-center py-6">لا توجد حالات غير معالجة 🎉</p>
                   ) : (
-                    CRITICAL_NOTIFICATIONS.map(a => {
-                      const meta = ALERT_STATUS_META[INITIAL_ALERT_STATUS[a.id]];
+                    notifications.map(a => {
+                      const meta = ALERT_STATUS_META[alertStatuses[a.id]];
                       return (
-                        <div key={a.id} className="px-4 py-2.5 hover:bg-gray-800/50 transition-colors">
+                        <button
+                          key={a.id}
+                          onClick={() => {
+                            goToAlert(a.id);
+                            setOpen(false);
+                          }}
+                          className="w-full text-right px-4 py-2.5 hover:bg-gray-800/50 transition-colors group"
+                        >
                           <div className="flex items-center justify-between">
                             <span className="text-white text-xs font-medium">{a.name}</span>
                             <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold ${meta.chip}`}>
                               {meta.label}
                             </span>
                           </div>
-                          <p className="text-gray-500 text-[10px] mt-0.5">
-                            {a.id} · {a.condition ?? "مؤشرات حيوية حرجة"} · نبض {a.heartRate}
-                          </p>
-                        </div>
+                          <div className="flex items-center justify-between mt-0.5">
+                            <p className="text-gray-500 text-[10px]">
+                              {a.id} · {a.condition ?? "مؤشرات حيوية حرجة"} · نبض {a.heartRate}
+                            </p>
+                            <span className="flex items-center gap-0.5 text-[9px] text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                              فتح على الخريطة <ChevronLeft className="w-2.5 h-2.5" />
+                            </span>
+                          </div>
+                        </button>
                       );
                     })
                   )}

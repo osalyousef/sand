@@ -1,10 +1,22 @@
 "use client";
 
-import { useMemo } from "react";
-import { MapContainer, TileLayer, Rectangle, CircleMarker, Tooltip } from "react-leaflet";
+import { useMemo, useEffect } from "react";
+import { MapContainer, TileLayer, Rectangle, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import { MOCK_CRITICAL_POINTS, MOCK_PREDICTED_POINTS } from "@/lib/mock-data";
 import { buildGrid, cellColor, distanceMeters, type SelectedCellInfo } from "@/lib/grid";
 import { INSTITUTIONS, INSTITUTION_STATUS_META, INSTITUTION_TYPE_LABEL, occupancyPct, occupancyColor } from "@/lib/ops-data";
+import { useIsLight } from "@/app/hooks/useTheme";
+import { useSanadStore, pilgrimById } from "@/lib/store";
+import { RISK_COLORS } from "@/lib/types";
+
+// Flies the map to the focused pilgrim (bell click, "تحديد على الخريطة", caller location)
+function FlyToFocus({ target }: { target: { lat: number; lng: number } | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) map.flyTo([target.lat, target.lng], 16, { duration: 1.2 });
+  }, [target, map]);
+  return null;
+}
 
 // Center on Mina
 const CENTER: [number, number] = [21.408, 39.873];
@@ -38,6 +50,15 @@ interface LeafletMapProps {
 }
 
 export default function LeafletMap({ mode, showInstitutions, selectedKey, onSelectCell }: LeafletMapProps) {
+  const light = useIsLight();
+  const focusPilgrimId = useSanadStore(s => s.focusPilgrimId);
+  const focusPoint = useSanadStore(s => s.focusPoint);
+  const focusedPilgrim = focusPilgrimId ? pilgrimById(focusPilgrimId) : null;
+  const flyTarget = focusedPilgrim
+    ? { lat: focusedPilgrim.lat, lng: focusedPilgrim.lng }
+    : focusPoint
+      ? { lat: focusPoint.lat, lng: focusPoint.lng }
+      : null;
   const cells = useMemo(() => {
     const points = mode === "now" ? MOCK_CRITICAL_POINTS : MOCK_PREDICTED_POINTS;
     const grid = buildGrid(points);
@@ -69,12 +90,14 @@ export default function LeafletMap({ mode, showInstitutions, selectedKey, onSele
       zoom={ZOOM}
       scrollWheelZoom
       className="w-full h-full"
-      style={{ background: "#0a0f1e" }}
+      style={{ background: light ? "#f4f1ea" : "#0a0f1e" }}
     >
-      {/* Dark basemap — keeps the command-center look and makes heat cells pop */}
+      {/* Theme-matched basemap: CARTO dark for command center, light for Nusuk mode.
+          Keyed so Leaflet swaps tiles when the theme changes. */}
       <TileLayer
+        key={light ? "light" : "dark"}
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        url={`https://{s}.basemaps.cartocdn.com/${light ? "light_all" : "dark_all"}/{z}/{x}/{y}{r}.png`}
         subdomains="abcd"
       />
 
@@ -117,6 +140,47 @@ export default function LeafletMap({ mode, showInstitutions, selectedKey, onSele
           </Tooltip>
         </CircleMarker>
       ))}
+
+      {/* Focused target — bell click / "تحديد على الخريطة" / caller location / institution */}
+      <FlyToFocus target={flyTarget} />
+      {focusPoint && !focusedPilgrim && (
+        <CircleMarker
+          center={[focusPoint.lat, focusPoint.lng]}
+          radius={11}
+          pathOptions={{
+            color: "#00d4aa",
+            weight: 3,
+            fillColor: "#00d4aa",
+            fillOpacity: 0.4,
+            className: "focus-marker",
+          }}
+        >
+          <Tooltip permanent direction="bottom" offset={[0, 8]}>
+            <div dir="rtl" style={{ fontSize: 11 }}>
+              <strong>{focusPoint.label}</strong>
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      )}
+      {focusedPilgrim && (
+        <CircleMarker
+          center={[focusedPilgrim.lat, focusedPilgrim.lng]}
+          radius={11}
+          pathOptions={{
+            color: RISK_COLORS[focusedPilgrim.riskLevel],
+            weight: 3,
+            fillColor: RISK_COLORS[focusedPilgrim.riskLevel],
+            fillOpacity: 0.5,
+            className: "focus-marker",
+          }}
+        >
+          <Tooltip permanent direction="bottom" offset={[0, 8]}>
+            <div dir="rtl" style={{ fontSize: 11 }}>
+              <strong>{focusedPilgrim.name}</strong> · {focusedPilgrim.id}
+            </div>
+          </Tooltip>
+        </CircleMarker>
+      )}
 
       {/* Health institutions — colored by bed occupancy */}
       {showInstitutions && INSTITUTIONS.map(inst => {

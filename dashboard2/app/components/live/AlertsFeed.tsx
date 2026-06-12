@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Heart, AlertTriangle, Ambulance, Stethoscope, CheckCircle2, Building2,
@@ -8,13 +8,13 @@ import {
 } from "lucide-react";
 import { MOCK_ALERTS } from "@/lib/mock-data";
 import {
-  INITIAL_ALERT_STATUS,
   ALERT_STATUS_META,
   LIFECYCLE_STEPS,
   RECOVERY_STATS,
   type AlertStatus,
 } from "@/lib/ops-data";
 import { OPS_INSIGHTS, type InsightType, type InsightSeverity } from "@/lib/agents";
+import { useSanadStore, jitter } from "@/lib/store";
 
 const RISK_LABEL = { red: "خطر", yellow: "تحذير", green: "آمن" };
 
@@ -34,13 +34,27 @@ const SEVERITY_STYLE: Record<InsightSeverity, { border: string; icon: string }> 
 export default function AlertsFeed() {
   const [view, setView] = useState<"alerts" | "agent">("alerts");
   const [selected, setSelected] = useState<string | null>(null);
-  const [statuses, setStatuses] = useState<Record<string, AlertStatus>>(INITIAL_ALERT_STATUS);
   const [showResolved, setShowResolved] = useState(true);
   const [executed, setExecuted] = useState<Set<string>>(new Set());
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  function advance(id: string, next: AlertStatus) {
-    setStatuses(prev => ({ ...prev, [id]: next }));
-  }
+  // Shared operational state — dispatching here moves teams everywhere
+  const statuses = useSanadStore(s => s.alertStatuses);
+  const advanceAlert = useSanadStore(s => s.advanceAlert);
+  const dispatchForPilgrim = useSanadStore(s => s.dispatchForPilgrim);
+  const focusAlertId = useSanadStore(s => s.focusAlertId);
+  const tick = useSanadStore(s => s.tick);
+
+  // Bell → alert: switch to alerts view, select, and scroll it into view
+  useEffect(() => {
+    if (!focusAlertId) return;
+    setView("alerts");
+    setSelected(focusAlertId);
+    const t = setTimeout(() => {
+      itemRefs.current[focusAlertId]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 100);
+    return () => clearTimeout(t);
+  }, [focusAlertId]);
 
   const isClosed = (s: AlertStatus) => s === "resolved" || s === "transferred";
   const active = MOCK_ALERTS.filter(a => !isClosed(statuses[a.id]));
@@ -88,14 +102,20 @@ export default function AlertsFeed() {
               const status = statuses[alert.id];
               const meta = ALERT_STATUS_META[status];
               const isSelected = selected === alert.id;
+              const isFocused = focusAlertId === alert.id;
               const isCriticalNew = alert.riskLevel === "red" && status === "new";
+              const seed = parseInt(alert.id.slice(1), 10) || 0;
+              // live vitals — tiny deterministic drift each tick
+              const hr = jitter(alert.heartRate, seed, tick, 3);
+              const o2 = Math.min(99, jitter(alert.oxygenLevel, seed + 5, tick, 1));
 
               return (
                 <div
                   key={alert.id}
+                  ref={el => { itemRefs.current[alert.id] = el; }}
                   className={`rounded-xl border bg-gray-950 px-3 py-2.5 cursor-pointer transition-colors ${
                     isCriticalNew ? "critical-pulse border-red-500" : isSelected ? "border-gray-600" : "border-gray-800 hover:border-gray-700"
-                  }`}
+                  } ${isFocused ? "ring-2 ring-emerald-500/60" : ""}`}
                   onClick={() => setSelected(isSelected ? null : alert.id)}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -108,11 +128,11 @@ export default function AlertsFeed() {
                   <div className="flex items-center gap-2 text-[10px] text-gray-500">
                     <span>{alert.id}</span>
                     <span>·</span>
-                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" /> {alert.heartRate}</span>
+                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5" /> {hr}</span>
                     <span>·</span>
                     <span>{alert.temperature}°م</span>
                     <span>·</span>
-                    <span>O₂ {alert.oxygenLevel}%</span>
+                    <span>O₂ {o2}%</span>
                   </div>
 
                   {alert.condition && (
@@ -129,7 +149,7 @@ export default function AlertsFeed() {
                         <span
                           key={s}
                           className="flex-1 h-1 rounded-full transition-colors"
-                          style={{ background: reached ? meta.color : "#263457" }}
+                          style={{ background: reached ? meta.color : "#2a3a63" }}
                           title={ALERT_STATUS_META[s].label}
                         />
                       );
@@ -151,10 +171,10 @@ export default function AlertsFeed() {
                         </div>
                       </div>
 
-                      {/* Lifecycle actions */}
+                      {/* Lifecycle actions — dispatch actually moves a team */}
                       {status === "new" && (
                         <button
-                          onClick={() => advance(alert.id, "dispatched")}
+                          onClick={() => dispatchForPilgrim(alert.id)}
                           className="w-full py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
                         >
                           <Ambulance className="w-3.5 h-3.5" /> إرسال فريق طبي
@@ -162,7 +182,7 @@ export default function AlertsFeed() {
                       )}
                       {status === "dispatched" && (
                         <button
-                          onClick={() => advance(alert.id, "treating")}
+                          onClick={() => advanceAlert(alert.id, "treating")}
                           className="w-full py-1.5 bg-blue-700 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
                         >
                           <Stethoscope className="w-3.5 h-3.5" /> وصل الفريق — بدء العلاج
@@ -171,13 +191,13 @@ export default function AlertsFeed() {
                       {status === "treating" && (
                         <div className="flex gap-2">
                           <button
-                            onClick={() => advance(alert.id, "resolved")}
+                            onClick={() => advanceAlert(alert.id, "resolved")}
                             className="flex-1 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" /> تم الحل
                           </button>
                           <button
-                            onClick={() => advance(alert.id, "transferred")}
+                            onClick={() => advanceAlert(alert.id, "transferred")}
                             className="flex-1 py-1.5 bg-purple-700 hover:bg-purple-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
                           >
                             <Building2 className="w-3.5 h-3.5" /> نقل لمستشفى

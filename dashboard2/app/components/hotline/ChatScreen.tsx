@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { UserRound } from "lucide-react";
+import { UserRound, MapPin } from "lucide-react";
 import type { MockContact, ChatMessage } from "@/lib/mock-data";
 import HealthSnapshot from "./HealthSnapshot";
 import AgentSuggestionCard from "@/app/components/agent/AgentSuggestionCard";
+import { useSanadStore } from "@/lib/store";
 
 export default function ChatScreen({ contact, onViewProfile }: { contact: MockContact; onViewProfile: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>(contact.messages ?? []);
   const [input, setInput] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
+  const focusOnMap = useSanadStore(s => s.focusOnMap);
 
   // Reset thread when switching pilgrims
   useEffect(() => {
@@ -51,6 +53,13 @@ export default function ChatScreen({ contact, onViewProfile }: { contact: MockCo
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => focusOnMap(contact.pilgrimId)}
+            data-tip="فتح موقع الحاج على الخريطة الحية"
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-blue-900/50 hover:bg-blue-900/80 border border-blue-800 text-blue-300 rounded-lg transition-colors"
+          >
+            <MapPin className="w-3.5 h-3.5" /> موقع الحاج
+          </button>
           <button
             onClick={onViewProfile}
             className="flex items-center gap-1.5 text-xs px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-lg transition-colors"

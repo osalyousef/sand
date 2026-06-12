@@ -13,6 +13,7 @@ import {
   getTimeline, getDischarge, RECOVERED_IDS,
   type MedicalEvent, type MedicalEventType,
 } from "@/lib/ops-data";
+import { useSanadStore } from "@/lib/store";
 
 const RISK_LABEL = { red: "خطر", yellow: "تحذير", green: "آمن" };
 
@@ -40,8 +41,11 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
   const [justRecovered, setJustRecovered] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [draft, setDraft] = useState("");
+  const [sentTeam, setSentTeam] = useState<string | null>(null);
   const genCount = useRef(0);
   const genTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const focusOnMap = useSanadStore(s => s.focusOnMap);
+  const dispatchForPilgrim = useSanadStore(s => s.dispatchForPilgrim);
 
   useEffect(() => () => { if (genTimer.current) clearTimeout(genTimer.current); }, []);
 
@@ -332,21 +336,29 @@ export default function PilgrimDetail({ pilgrim }: { pilgrim: MockPilgrim }) {
           </section>
         )}
 
-        {/* Actions */}
+        {/* Actions — wired to the shared ops store */}
         <div className="flex gap-3 pt-1">
           <button
-            data-tip="فتح موقع الحاج على الخريطة الحية"
+            onClick={() => focusOnMap(pilgrim.id)}
+            data-tip="ينقلك للشاشة المباشرة والخريطة تطير لموقع الحاج"
             className="flex-1 py-2 bg-blue-700 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5"
           >
             <Map className="w-4 h-4" /> تحديد على الخريطة
           </button>
           {!isRecovered && (
-            <button
-              data-tip="إسناد أقرب فريق متاح لهذا الحاج"
-              className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5"
-            >
-              <Ambulance className="w-4 h-4" /> إرسال فريق
-            </button>
+            sentTeam ? (
+              <span className="flex-1 py-2 bg-emerald-900/40 border border-emerald-700 text-emerald-300 text-sm rounded-lg flex items-center justify-center gap-1.5">
+                <Check className="w-4 h-4" /> أُرسل {sentTeam}
+              </span>
+            ) : (
+              <button
+                onClick={() => setSentTeam(dispatchForPilgrim(pilgrim.id) ?? "— لا فرق متاحة")}
+                data-tip="إسناد أقرب فريق متاح — يظهر فوراً في لوحة الفرق"
+                className="flex-1 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-sm rounded-lg transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Ambulance className="w-4 h-4" /> إرسال فريق
+              </button>
+            )
           )}
         </div>
       </div>

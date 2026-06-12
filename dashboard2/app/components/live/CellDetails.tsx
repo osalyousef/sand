@@ -1,8 +1,10 @@
 "use client";
 
-import { Ambulance, ClipboardList, Bot } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Ambulance, ClipboardList, Bot, Check } from "lucide-react";
 import { densityLabel, cellColor, type SelectedCellInfo } from "@/lib/grid";
 import { getCellRecommendation } from "@/lib/agents";
+import { useSanadStore } from "@/lib/store";
 
 export default function CellDetails({
   cell,
@@ -11,6 +13,12 @@ export default function CellDetails({
   cell: SelectedCellInfo;
   onClose: () => void;
 }) {
+  const dispatchToLocation = useSanadStore(s => s.dispatchToLocation);
+  const [sentTeam, setSentTeam] = useState<string | null>(null);
+
+  // selecting a different cell resets the dispatch state
+  useEffect(() => { setSentTeam(null); }, [cell.key]);
+
   return (
     <div className="absolute bottom-3 right-3 z-[1000] w-64 bg-gray-950/95 border border-gray-700 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm">
       {/* Header */}
@@ -64,9 +72,23 @@ export default function CellDetails({
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">
-          <button className="flex-1 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5">
-            <Ambulance className="w-3.5 h-3.5" /> إرسال فريق
-          </button>
+          {sentTeam ? (
+            <span className="flex-1 py-1.5 bg-emerald-900/40 border border-emerald-700 text-emerald-300 text-xs rounded-lg flex items-center justify-center gap-1.5">
+              <Check className="w-3.5 h-3.5" /> أُرسل {sentTeam}
+            </span>
+          ) : (
+            <button
+              onClick={() =>
+                setSentTeam(
+                  dispatchToLocation(`خلية قرب ${cell.nearestLandmark} — ${cell.value} حالة حرجة`) ?? "— لا فرق متاحة"
+                )
+              }
+              data-tip="يُسند أقرب فريق متاح لهذه الخلية — يظهر في لوحة الفرق"
+              className="flex-1 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Ambulance className="w-3.5 h-3.5" /> إرسال فريق
+            </button>
+          )}
           <button className="flex-1 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5">
             <ClipboardList className="w-3.5 h-3.5" /> الحالات
           </button>

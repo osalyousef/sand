@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
 import { Activity, Phone, Search, BarChart3, Building2 } from "lucide-react";
+import { useSanadStore } from "@/lib/store";
 import Header from "@/app/components/Header";
 import Footer from "@/app/components/Footer";
 import LiveTab from "@/app/components/tabs/LiveTab";
@@ -18,10 +19,16 @@ const TABS = [
   { id: "data", label: "البيانات", description: "التحليلات والإحصاءات", Icon: BarChart3 },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
-
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<TabId>("live");
+  const activeTab = useSanadStore(s => s.activeTab);
+  const setActiveTab = useSanadStore(s => s.setActiveTab);
+
+  // Live pulse — panels derive small vitals jitter from this so the
+  // dashboard breathes instead of sitting frozen.
+  useEffect(() => {
+    const id = setInterval(() => useSanadStore.getState().bump(), 5000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 text-white overflow-hidden">
