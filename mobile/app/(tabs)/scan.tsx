@@ -13,11 +13,13 @@ import { useCallback, useRef, useState } from "react";
 import { Camera, Zap, RefreshCw } from "lucide-react-native";
 import {
   resolveScannedPilgrim,
-  randomRegistryId,
+  randomBackendBraceletId,
 } from "@/lib/pilgrim-registry";
+import { useScanned } from "@/lib/scanned-store";
 
 export default function Scan() {
   const router = useRouter();
+  const { add } = useScanned();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const cooldown = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,23 +35,24 @@ export default function Scan() {
         ]);
         return;
       }
+      add(entry); // append the scanned pilgrim to the recents list
       router.push({
         pathname: "/pilgrim/[id]",
         params: { id: entry.pilgrim.id, data: JSON.stringify(entry) },
       });
       cooldown.current = setTimeout(() => setScanned(false), 1500);
     },
-    [router, scanned],
+    [router, scanned, add],
   );
 
-  const demoScan = () => handlePayload(randomRegistryId());
+  const demoScan = () => handlePayload(randomBackendBraceletId());
 
   // ─── permission states ─────────────────────────────────────────────────
   if (!permission) {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <ActivityIndicator color="#f97316" />
+          <ActivityIndicator color="#b07d12" />
         </View>
       </SafeAreaView>
     );
@@ -59,7 +62,7 @@ export default function Scan() {
     return (
       <SafeAreaView style={styles.safe}>
         <View style={styles.center}>
-          <Camera color="#f97316" size={48} />
+          <Camera color="#b07d12" size={48} />
           <Text style={styles.permTitle}>الكاميرا مطلوبة</Text>
           <Text style={styles.permBody}>
             نحتاج إذن الكاميرا لمسح أساور الحجاج.
@@ -134,7 +137,7 @@ const styles = StyleSheet.create({
   permTitle: { color: "#3d3424", fontSize: 20, fontWeight: "800", marginTop: 12 },
   permBody: { color: "#6b6457", fontSize: 14, textAlign: "center", lineHeight: 20 },
   permBtn: {
-    backgroundColor: "#f97316",
+    backgroundColor: "#b07d12",
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
@@ -170,7 +173,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 36,
     height: 36,
-    borderColor: "#f97316",
+    borderColor: "#b07d12",
   },
   tl: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 8 },
   tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 8 },
@@ -195,7 +198,7 @@ const styles = StyleSheet.create({
   },
   resetText: { color: "#3d3424", fontWeight: "700", fontSize: 14 },
   demoBtn: {
-    backgroundColor: "#f97316",
+    backgroundColor: "#b07d12",
     borderRadius: 10,
     paddingVertical: 14,
     flexDirection: "row",

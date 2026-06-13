@@ -17,14 +17,19 @@ import {
   Check,
   Repeat,
   X,
-  Maximize2,
   ChevronLeft,
   MapPin,
   PlusCircle,
   Sun,
+  HeartPulse,
+  Sparkles,
+  Stethoscope,
 } from "lucide-react-native";
 import QRCode from "react-native-qrcode-svg";
 import { RISK_COLORS, type RiskLevel } from "@/types";
+import HealthCard from "@/components/HealthCard";
+import { getResponseSuggestion, AGENTS } from "@/lib/agents";
+import type { ScannedPilgrim } from "@/lib/scanned-store";
 
 I18nManager.forceRTL(true);
 
@@ -69,8 +74,6 @@ const INITIAL_MEDS: Med[] = [
   { time: "٢٠:٠٠", name: "ليسينوبريل", dose: "10mg", status: "upcoming" },
 ];
 
-const HYDRATION = { drunk: 6, goal: 9 };
-
 const VITALS = [
   { label: "النبض", value: "72", unit: "bpm" },
   { label: "الضغط", value: "128/82", unit: "mmHg" },
@@ -80,17 +83,48 @@ const VITALS = [
 // The signed-in pilgrim. Matches a bracelet record so the medical team's
 // scanner resolves this exact QR to the full health profile.
 const ME = {
-  id: "SA-2024-EG-04412",
-  initials: "م.إ",
-  name: "محمد إبراهيم الفارسي",
-  age: 68,
-  nationality: "مصر",
+  id: "3C27343B9F43",
+  initials: "RS",
+  name: "Rachel Smith",
+  identityId: "2419875036",
+  age: 85,
+  nationality: "Solomon Islands",
+  bloodType: "O+",
   risk: "red" as RiskLevel,
-  conditions: ["قصور في القلب", "ارتفاع ضغط الدم"],
+  conditions: ["السكري", "ارتفاع ضغط الدم", "مرض تنفسي مزمن"],
 };
 
 // QR carries just the ID, exactly the shape the scanner's parsePayloadId reads.
 const QR_PAYLOAD = JSON.stringify({ id: ME.id });
+
+// «مُغيث» reads the pilgrim's own vitals + conditions and produces a live
+// assessment + guidance addressed to them — same agent the field team sees.
+const NOW = new Date().toISOString();
+const ME_ENTRY: ScannedPilgrim = {
+  pilgrim: {
+    id: ME.id,
+    full_name: ME.name,
+    age: ME.age,
+    nationality: ME.nationality,
+    passport_number: null,
+    has_diabetes: ME.conditions.includes("السكري"),
+    has_hypertension: ME.conditions.includes("ارتفاع ضغط الدم"),
+    has_heart_condition: ME.conditions.some((c) => c.includes("قلب")),
+    medications: INITIAL_MEDS.map((m) => m.name),
+    created_at: NOW,
+  },
+  vitals: {
+    id: "v-me",
+    pilgrim_id: ME.id,
+    heart_rate: 72,
+    temperature: 37.0,
+    oxygen_level: 97,
+    recorded_at: NOW,
+  },
+  risk: { id: "r-me", pilgrim_id: ME.id, risk_level: ME.risk, score: 0.6, assessed_at: NOW },
+  scannedAt: NOW,
+};
+const ME_SUGGESTION = getResponseSuggestion(ME_ENTRY);
 
 const RISK_LABEL: Record<RiskLevel, string> = {
   red: "مرتفع",
@@ -115,10 +149,6 @@ function TabToday({
   onTake: (idx: number) => void;
 }) {
   const taken = meds.filter((m) => m.status === "taken").length;
-  const [drunk, setDrunk] = useState(HYDRATION.drunk);
-
-  // tapping a dot sets the count to that level; tapping the current level steps back one
-  const setLevel = (i: number) => setDrunk((d) => (d === i + 1 ? i : i + 1));
 
   return (
     <ScrollView
@@ -126,34 +156,35 @@ function TabToday({
       contentContainerStyle={styles.tabContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* hydration */}
+      {/* «مُغيث» — health assistant: live assessment + guidance for the pilgrim */}
       <View style={styles.card}>
-        <View style={styles.cardTopRow}>
-          <View style={styles.hydroNumber}>
-            <Text style={styles.hydroDrunk}>{drunk}</Text>
-            <Text style={styles.hydroGoal}>/ {HYDRATION.goal}</Text>
-          </View>
-          <View style={styles.cardHeadText}>
-            <Text style={styles.cardTitle}>الترطيب</Text>
-            <Text style={styles.cardSub}>
-              {drunk >= HYDRATION.goal ? "أحسنت — بلغت هدف اليوم" : "ابقَ في الظل بعد العصر"}
-            </Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.agentRole}>{AGENTS.response.role}</Text>
+          <View style={styles.agentNameRow}>
+            <Text style={styles.cardTitle}>{AGENTS.response.name}</Text>
+            <Sparkles color={SN.gold} size={14} strokeWidth={2} />
           </View>
         </View>
 
-        <View style={styles.hydroBars}>
-          {Array.from({ length: HYDRATION.goal }, (_, i) => (
-            <TouchableOpacity
-              key={i}
-              activeOpacity={0.7}
-              onPress={() => setLevel(i)}
-              style={[
-                styles.hydroBar,
-                { backgroundColor: i < drunk ? SN.gold : SN.graphite2 },
-              ]}
-            />
-          ))}
+        <View style={styles.agentDiagRow}>
+          <Stethoscope
+            color={RISK_COLORS[ME_SUGGESTION.diagnosis.severity]}
+            size={17}
+            strokeWidth={1.9}
+          />
+          <Text
+            style={[
+              styles.agentDiag,
+              { color: RISK_COLORS[ME_SUGGESTION.diagnosis.severity] },
+            ]}
+          >
+            {ME_SUGGESTION.diagnosis.title}
+          </Text>
         </View>
+
+        <Text style={styles.agentGuidance}>{ME_SUGGESTION.guidance}</Text>
+
+        <Text style={styles.agentNote}>مساعدك الصحي — يتابع حالتك ويُنبّه الفريق عند الحاجة</Text>
       </View>
 
       {/* medications */}
@@ -231,47 +262,22 @@ function TabHealth() {
       contentContainerStyle={styles.tabContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* identity + QR */}
-      <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.85}
-        onPress={() => setOpen(true)}
-      >
-        <View style={styles.idTopRow}>
-          <View
-            style={[
-              styles.riskBadge,
-              { borderColor: risk, backgroundColor: `${risk}1A` },
-            ]}
-          >
-            <Text style={[styles.riskBadgeText, { color: risk }]}>
-              {RISK_LABEL[ME.risk]}
-            </Text>
-          </View>
-          <View style={styles.idNameWrap}>
-            <Text style={styles.idCardLabel}>بطاقتي الصحية</Text>
-            <Text style={styles.idName}>{ME.name}</Text>
-            <Text style={styles.idMeta}>
-              {ME.age} سنة · {ME.nationality}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.idDivider} />
-
-        <View style={styles.idBottomRow}>
-          <ChevronLeft color={SN.fg3} size={16} strokeWidth={1.8} />
-          <View style={styles.idBottomText}>
-            <Text style={styles.idCode}>{ME.id}</Text>
-            <View style={styles.idHintRow}>
-              <Maximize2 color={SN.fg3} size={11} strokeWidth={2} />
-              <Text style={styles.idCardHint}>اعرضه للفريق الطبي للوصول لملفك</Text>
-            </View>
-          </View>
-          <View style={styles.idQrThumb}>
-            <QRCode value={QR_PAYLOAD} size={52} backgroundColor="#ffffff" color="#0d0d0d" />
-          </View>
-        </View>
+      {/* identity — Nusuk health card (ported from the card/ Vite design) */}
+      <TouchableOpacity activeOpacity={0.9} onPress={() => setOpen(true)}>
+        <HealthCard
+          name={ME.name}
+          nationality={ME.nationality}
+          initials={ME.initials}
+          risk={ME.risk}
+          qrValue={QR_PAYLOAD}
+          fields={[
+            { labelEn: "PILGRIM ID", labelAr: "رقم الحاج", value: ME.id },
+            { labelEn: "IDENTITY NO.", labelAr: "رقم الهوية", value: ME.identityId, align: "center" },
+            { labelEn: "AGE", labelAr: "العمر", value: `${ME.age} yrs` },
+            { labelEn: "BLOOD TYPE", labelAr: "فصيلة الدم", value: ME.bloodType, align: "center" },
+          ]}
+        />
+        <Text style={styles.cardTapHint}>اضغط لعرض الرمز للفريق الطبي</Text>
       </TouchableOpacity>
 
       {/* vitals */}
@@ -367,9 +373,47 @@ function QrModal({
   );
 }
 
+function NotifModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Modal
+      visible={open}
+      animationType="fade"
+      transparent
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.notifSheet}>
+          <TouchableOpacity
+            style={styles.qrClose}
+            onPress={onClose}
+            hitSlop={12}
+            activeOpacity={0.7}
+          >
+            <X color={SN.fg2} size={22} />
+          </TouchableOpacity>
+
+          <View style={styles.notifIcon}>
+            <HeartPulse color={SN.red} size={26} strokeWidth={2} />
+          </View>
+          <Text style={styles.notifLabel}>تنبيه صحّي</Text>
+          <Text style={styles.notifTitle}>نبضك ١١٣ نبضة/الدقيقة</Text>
+          <Text style={styles.notifBody}>
+            ضربات قلبك مرتفعة قليلاً. اجلس واسترِح واشرب بعض الماء.
+          </Text>
+
+          <TouchableOpacity style={styles.notifBtn} onPress={onClose} activeOpacity={0.85}>
+            <Text style={styles.notifBtnText}>حسنًا</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // ─── Tab: الطوارئ — Help / Emergency ────────────────────────────────────────
 
-function TabHelp({ onCall }: { onCall: () => void }) {
+function TabHelp({ onCall, onChat }: { onCall: () => void; onChat: () => void }) {
   return (
     <ScrollView
       style={styles.tabScroll}
@@ -398,6 +442,7 @@ function TabHelp({ onCall }: { onCall: () => void }) {
         Icon={MessageSquare}
         label="دردشة مع ممرض"
         sub="استجابة خلال دقائق"
+        onPress={onChat}
       />
       <ActionRow
         Icon={MapPin}
@@ -417,13 +462,15 @@ function ActionRow({
   Icon,
   label,
   sub,
+  onPress,
 }: {
   Icon: typeof MessageSquare;
   label: string;
   sub: string;
+  onPress?: () => void;
 }) {
   return (
-    <TouchableOpacity style={styles.actionRow} activeOpacity={0.75}>
+    <TouchableOpacity style={styles.actionRow} activeOpacity={0.75} onPress={onPress}>
       <ChevronLeft color={SN.fg3} size={15} strokeWidth={1.8} />
       <View style={styles.actionText}>
         <Text style={styles.actionLabel}>{label}</Text>
@@ -442,6 +489,7 @@ export default function PilgrimHome() {
   const router = useRouter();
   const [meds, setMeds] = useState<Med[]>(INITIAL_MEDS);
   const [tab, setTab] = useState<TabId>("today");
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const markTaken = (idx: number) =>
     setMeds((prev) =>
@@ -468,7 +516,15 @@ export default function PilgrimHome() {
           </View>
         </TouchableOpacity>
         <Text style={styles.wordmark}>سند</Text>
-        <Bell color={SN.fg3} size={19} strokeWidth={1.6} />
+        <TouchableOpacity
+          style={styles.bellWrap}
+          activeOpacity={0.7}
+          onPress={() => setNotifOpen(true)}
+          hitSlop={10}
+        >
+          <Bell color={SN.fg3} size={19} strokeWidth={1.6} />
+          <View style={styles.bellDot} />
+        </TouchableOpacity>
       </View>
 
       {/* greeting */}
@@ -502,7 +558,14 @@ export default function PilgrimHome() {
       {/* tab content */}
       {tab === "today" && <TabToday meds={meds} onTake={markTaken} />}
       {tab === "health" && <TabHealth />}
-      {tab === "help" && <TabHelp onCall={() => router.push("/call")} />}
+      {tab === "help" && (
+        <TabHelp
+          onCall={() => router.push("/call")}
+          onChat={() => router.push("/chat")}
+        />
+      )}
+
+      <NotifModal open={notifOpen} onClose={() => setNotifOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -602,6 +665,35 @@ const styles = StyleSheet.create({
   },
   cardHeadText: { alignItems: "flex-end" },
   cardTitle: { fontSize: 14, fontWeight: "700", color: SN.fg1 },
+  cardTapHint: { color: SN.fg3, fontSize: 11, textAlign: "center", marginTop: 8 },
+
+  // «مُغيث» assistant card
+  agentRole: { color: SN.fg3, fontSize: 11, fontWeight: "600" },
+  agentNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  agentDiagRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 7,
+    marginTop: 12,
+  },
+  agentDiag: { fontSize: 15, fontWeight: "800", textAlign: "right", flexShrink: 1 },
+  agentGuidance: {
+    color: SN.fg2,
+    fontSize: 13,
+    lineHeight: 21,
+    textAlign: "right",
+    marginTop: 8,
+  },
+  agentNote: {
+    color: SN.fg3,
+    fontSize: 11,
+    textAlign: "right",
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: SN.rule,
+  },
   cardSub: { fontSize: 11.5, color: SN.fg3, marginTop: 4, textAlign: "right" },
 
   // hydration
@@ -786,4 +878,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   qrSheetCode: { color: SN.fg3, fontSize: 13, fontWeight: "700", letterSpacing: 0.6, marginTop: 10 },
+
+  // bell + notification
+  bellWrap: { padding: 2 },
+  bellDot: {
+    position: "absolute",
+    top: 1,
+    right: 1,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: SN.red,
+    borderWidth: 1.5,
+    borderColor: SN.bg,
+  },
+  notifSheet: {
+    width: "100%",
+    backgroundColor: SN.bgRaised,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: SN.rule,
+    paddingTop: 28,
+    paddingBottom: 22,
+    paddingHorizontal: 24,
+    alignItems: "center",
+  },
+  notifIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: SN.redFill,
+    borderWidth: 1,
+    borderColor: SN.redRule,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  notifLabel: { color: SN.red, fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
+  notifTitle: {
+    color: SN.fg1,
+    fontSize: 19,
+    fontWeight: "800",
+    marginTop: 5,
+    textAlign: "center",
+  },
+  notifBody: {
+    color: SN.fg2,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  notifBtn: {
+    marginTop: 20,
+    alignSelf: "stretch",
+    backgroundColor: SN.gold,
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+  notifBtnText: { color: SN.goldInk, fontSize: 15, fontWeight: "800", letterSpacing: 0.2 },
 });

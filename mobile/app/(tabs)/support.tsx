@@ -106,7 +106,7 @@ export default function DispatchScreen() {
         {/* dispatcher banner */}
         <View style={styles.opsCard}>
           <View style={styles.opsIcon}>
-            <Radio color="#f97316" size={22} />
+            <Radio color="#b07d12" size={22} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.opsTitle}>إيفاد ميداني مباشر</Text>
@@ -212,11 +212,11 @@ export default function DispatchScreen() {
                 </View>
 
                 <View style={styles.sheetInfoRow}>
-                  <Activity color="#f97316" size={15} />
+                  <Activity color="#b07d12" size={15} />
                   <Text style={styles.sheetInfoText}>{active.vitals}</Text>
                 </View>
                 <View style={styles.sheetInfoRow}>
-                  <MapPin color="#f97316" size={15} />
+                  <MapPin color="#b07d12" size={15} />
                   <Text style={styles.sheetInfoText}>{active.zone}</Text>
                 </View>
 
@@ -249,7 +249,7 @@ export default function DispatchScreen() {
                   activeOpacity={0.8}
                   onPress={() => locate(active)}
                 >
-                  <MapPin color="#f97316" size={17} />
+                  <MapPin color="#b07d12" size={17} />
                   <Text style={styles.locateText}>تحديد الموقع على الخريطة</Text>
                 </TouchableOpacity>
               </>
@@ -305,9 +305,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: "#fdf0e2",
+    backgroundColor: "#faf2dd",
     borderWidth: 1,
-    borderColor: "#fad4b3",
+    borderColor: "#ecdcb6",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -409,14 +409,14 @@ const styles = StyleSheet.create({
   sheetMeta: { color: "#6b6457", fontSize: 13, textAlign: "right" },
   sheetMsg: {
     alignSelf: "stretch",
-    backgroundColor: "#fdf0e2",
+    backgroundColor: "#faf2dd",
     borderWidth: 1,
-    borderColor: "#fad4b3",
+    borderColor: "#ecdcb6",
     borderRadius: 12,
     padding: 13,
     marginTop: 10,
   },
-  sheetMsgText: { color: "#9a3412", fontSize: 14, lineHeight: 21, textAlign: "right" },
+  sheetMsgText: { color: "#8a6a2e", fontSize: 14, lineHeight: 21, textAlign: "right" },
   sheetInfoRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#b91c1c",
+    backgroundColor: "#b5432b",
     borderRadius: 14,
     paddingVertical: 15,
     marginTop: 18,
@@ -459,5 +459,5 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     marginTop: 10,
   },
-  locateText: { color: "#f97316", fontSize: 14, fontWeight: "700" },
+  locateText: { color: "#b07d12", fontSize: 14, fontWeight: "700" },
 });

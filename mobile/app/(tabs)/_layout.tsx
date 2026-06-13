@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import { Home, Users, Map, ScanQrCode, Siren } from "lucide-react-native";
 
-const ACTIVE = "#f97316";
+const ACTIVE = "#b07d12";
 const INACTIVE = "#9a917f";
 const BG = "#f7f0e1";
 const BORDER = "#e6dcc8";

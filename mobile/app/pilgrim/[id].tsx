@@ -4,17 +4,43 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
-import { ChevronRight, Activity, Phone, MapPin, Sparkles } from "lucide-react-native";
-import { RISK_COLORS, type RiskLevel } from "@/types";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChevronRight,
+  Activity,
+  Phone,
+  MapPin,
+  Sparkles,
+  Stethoscope,
+  Building2,
+  Clock,
+  HelpCircle,
+} from "lucide-react-native";
+import { RISK_COLORS, type RiskLevel, type AIPrediction } from "@/types";
 import type { ScannedPilgrim } from "@/lib/scanned-store";
 import { fetchTriage, type TriageResult } from "@/lib/health-platform";
+import { getRiskLevel } from "@/lib/ai";
+import { getResponseSuggestion, AGENTS } from "@/lib/agents";
+import { nearestWithCapacity } from "@/lib/ops-data";
+import HealthCard from "@/components/HealthCard";
 
 function riskLabel(level: RiskLevel) {
   return level === "red" ? "حرج" : level === "yellow" ? "عالٍ" : "منخفض";
+}
+
+// Arabic labels for the model's SHAP feature names (backend returns them in
+// English). Unknown features fall through to their original string.
+const FEATURE_LABELS: Record<string, string> = {
+  "Age": "العمر",
+  "CVD risk score": "مؤشر خطر القلب والأوعية",
+};
+
+function featureLabel(feature: string): string {
+  return FEATURE_LABELS[feature] ?? feature;
 }
 
 function VitalBox({
@@ -53,8 +79,47 @@ export default function PilgrimDetail() {
     return () => { active = false; };
   }, [pilgrim.id]);
 
-  const effectiveRisk: RiskLevel = triage?.risk_level ?? risk.risk_level;
+  // AI vitals model — computes a model risk from the bracelet's live vitals.
+  // Fills the gap for bracelet records, which carry vitals but have no feature
+  // vector, so the platform's XGBoost triage returns insufficient_data. Falls
+  // back silently (stays null) when vitals are missing or the endpoint is down.
+  const [aiRisk, setAiRisk] = useState<AIPrediction | null>(null);
+  useEffect(() => {
+    const { heart_rate, temperature, oxygen_level } = vitals;
+    if (heart_rate == null || temperature == null || oxygen_level == null) return;
+    let active = true;
+    getRiskLevel({
+      age: pilgrim.age,
+      heart_rate,
+      temperature,
+      oxygen_level,
+      has_diabetes: pilgrim.has_diabetes,
+      has_heart_condition: pilgrim.has_heart_condition,
+      has_hypertension: pilgrim.has_hypertension,
+    })
+      .then((r) => { if (active) setAiRisk(r); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [pilgrim.id]);
+
+  // Risk precedence: real XGBoost triage → AI vitals model → static bracelet value.
+  const effectiveRisk: RiskLevel =
+    triage?.risk_level ?? aiRisk?.risk_level ?? risk.risk_level;
+  const effectiveScore: number = aiRisk?.score ?? risk.score;
   const riskColor = RISK_COLORS[effectiveRisk];
+  const riskSource = triage?.risk_level
+    ? "AI TRIAGE"
+    : aiRisk
+      ? "AI · VITALS"
+      : "CRITICAL";
+
+  // «مُغيث» response agent — clinical copilot derived from vitals + conditions.
+  const suggestion = useMemo(() => getResponseSuggestion(entry), [entry]);
+  const needsHospital = effectiveRisk === "red";
+  const hospital = useMemo(
+    () => nearestWithCapacity(needsHospital),
+    [needsHospital],
+  );
 
   const conditions = [
     pilgrim.has_heart_condition ? "قصور قلبي مزمن" : null,
@@ -81,25 +146,32 @@ export default function PilgrimDetail() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* identity card */}
+        {/* identity — Nusuk health card (ported from the card/ Vite design) */}
+        <HealthCard
+          name={pilgrim.full_name}
+          nationality={pilgrim.nationality}
+          risk={effectiveRisk}
+          qrValue={JSON.stringify({ id: pilgrim.id })}
+          fields={[
+            { labelEn: "PILGRIM ID", labelAr: "رقم الحاج", value: pilgrim.id },
+            { labelEn: "PASSPORT", labelAr: "رقم الجواز", value: pilgrim.passport_number ?? "—", align: "center" },
+            { labelEn: "AGE", labelAr: "العمر", value: `${pilgrim.age} yrs` },
+            { labelEn: "NATIONALITY", labelAr: "الجنسية", value: pilgrim.nationality ?? "—", align: "center" },
+          ]}
+        />
+
+        {/* vitals + triage source */}
         <View style={[styles.identityCard, { borderColor: riskColor }]}>
           <View style={styles.identityTop}>
             <View style={[styles.riskBadge, { borderColor: riskColor }]}>
               <Text style={[styles.riskBadgeText, { color: riskColor }]}>
                 {riskLabel(effectiveRisk)}
               </Text>
-              <Text style={styles.riskCritical}>
-                {triage?.risk_level ? "AI TRIAGE" : "CRITICAL"}
-              </Text>
+              <Text style={styles.riskCritical}>{riskSource}</Text>
             </View>
             <Activity color={riskColor} size={20} />
           </View>
-          <Text style={styles.name}>{pilgrim.full_name}</Text>
-          <Text style={styles.meta}>
-            {pilgrim.age} سنة · {pilgrim.nationality} · {pilgrim.passport_number}
-          </Text>
 
-          {/* vitals */}
           <View style={styles.vitalsRow}>
             <VitalBox
               value={String(vitals.heart_rate)}
@@ -117,7 +189,7 @@ export default function PilgrimDetail() {
               highlight={!!vitals.oxygen_level && vitals.oxygen_level < 95}
             />
             <VitalBox
-              value={`${Math.round(risk.score * 100)}%`}
+              value={`${Math.round(effectiveScore * 100)}%`}
               label="خطورة"
               highlight
             />
@@ -128,7 +200,7 @@ export default function PilgrimDetail() {
         {triage?.risk_level && (
           <View style={[styles.section, { borderColor: `${riskColor}55`, borderWidth: 1 }]}>
             <View style={styles.triageHeader}>
-              <Text style={styles.sectionTitle}>تصنيف الفرز الآلي · XGBoost</Text>
+              <Text style={styles.sectionTitle}>تصنيف الفرز</Text>
               <View style={[styles.triagePill, { borderColor: riskColor }]}>
                 <Text style={[styles.triagePillText, { color: riskColor }]}>
                   {riskLabel(triage.risk_level)}
@@ -144,7 +216,7 @@ export default function PilgrimDetail() {
                 {triage.primary_risk_factors.map((f, i) => (
                   <View key={i} style={styles.shapRow}>
                     <Text style={styles.shapValue}>{String(f.value)}</Text>
-                    <Text style={styles.shapFeature}>{f.feature}</Text>
+                    <Text style={styles.shapFeature}>{featureLabel(f.feature)}</Text>
                   </View>
                 ))}
               </>
@@ -153,6 +225,56 @@ export default function PilgrimDetail() {
             )}
           </View>
         )}
+
+        {/* «مُغيث» response agent — clinical copilot suggestion */}
+        <View style={[styles.section, styles.agentSection]}>
+          <View style={styles.agentHeader}>
+            <View style={styles.agentBadge}>
+              <Sparkles color="#b07d12" size={12} />
+              <Text style={styles.agentBadgeText}>
+                {AGENTS.response.name} · {AGENTS.response.role}
+              </Text>
+            </View>
+            <Stethoscope color="#b07d12" size={18} />
+          </View>
+
+          {/* diagnosis */}
+          <Text
+            style={[
+              styles.diagTitle,
+              { color: RISK_COLORS[suggestion.diagnosis.severity] },
+            ]}
+          >
+            {suggestion.diagnosis.title}
+          </Text>
+          <Text style={styles.diagDetail}>{suggestion.diagnosis.detail}</Text>
+
+          {/* treatment */}
+          <Text style={styles.agentLabel}>التدبير الموصى به</Text>
+          <Text style={styles.agentBody}>{suggestion.treatment}</Text>
+
+          {/* triage questions */}
+          <Text style={styles.agentLabel}>أسئلة الفرز</Text>
+          {suggestion.questions.map((q) => (
+            <View key={q} style={styles.qRow}>
+              <Text style={styles.qText}>{q}</Text>
+              <HelpCircle color="#9a917f" size={13} />
+            </View>
+          ))}
+
+          {/* field brief */}
+          <Text style={styles.agentLabel}>موجز للفريق الميداني</Text>
+          {suggestion.fieldBrief.map((b) => (
+            <View key={b} style={styles.briefRow}>
+              <Text style={styles.briefText}>{b}</Text>
+              <View style={styles.bullet} />
+            </View>
+          ))}
+
+          <Text style={styles.agentNote}>
+            اقتراح آلي — يعتمده الكادر الطبي قبل التنفيذ
+          </Text>
+        </View>
 
         {/* conditions */}
         {conditions.length > 0 && (
@@ -185,20 +307,45 @@ export default function PilgrimDetail() {
 
       {/* CTAs */}
       <View style={styles.ctaContainer}>
+        {/* nearest institution with a free bed — routes critical cases to a hospital */}
         <TouchableOpacity
-          style={styles.locationButton}
+          style={styles.hospitalButton}
           activeOpacity={0.85}
           onPress={() =>
-            router.push({ pathname: "/(tabs)/map", params: { focus: pilgrim.id } })
+            router.push({
+              pathname: "/institutions",
+              params: { needsHospital: needsHospital ? "1" : "0" },
+            })
           }
         >
-          <MapPin color="#3d3424" size={18} />
-          <Text style={styles.locationText}>موقع على الخريطة</Text>
+          <Building2 color="#3d3424" size={16} />
+          <Text style={styles.hospitalText}>أقرب منشأة: {hospital.name}</Text>
+          <View style={styles.hospitalEta}>
+            <Clock color="#6b6457" size={12} />
+            <Text style={styles.hospitalEtaText}>~{hospital.etaMin} د</Text>
+          </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85}>
-          <Phone color="#3d3424" size={18} />
-          <Text style={styles.ctaText}>اتصال طارئ — الفريق الطبي</Text>
-        </TouchableOpacity>
+
+        <View style={styles.ctaRow}>
+          <TouchableOpacity
+            style={styles.locationButton}
+            activeOpacity={0.85}
+            onPress={() =>
+              router.push({ pathname: "/(tabs)/map", params: { focus: pilgrim.id } })
+            }
+          >
+            <MapPin color="#3d3424" size={18} />
+            <Text style={styles.locationText}>الخريطة</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.ctaButton}
+            activeOpacity={0.85}
+            onPress={() => Linking.openURL(`tel:${hospital.contact}`)}
+          >
+            <Phone color="#fff" size={18} />
+            <Text style={styles.ctaText}>اتصال طارئ — الفريق الطبي</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -331,6 +478,55 @@ const styles = StyleSheet.create({
   shapValue: { color: "#b8860b", fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"] },
   shapFeature: { color: "#2f2a22", fontSize: 13, textAlign: "right" },
 
+  // «مُغيث» response agent section
+  agentSection: { borderColor: "rgba(176,125,18,0.45)", borderWidth: 1 },
+  agentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  agentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(176,125,18,0.12)",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  agentBadgeText: { color: "#8a6a2e", fontSize: 11, fontWeight: "800" },
+  diagTitle: { fontSize: 15, fontWeight: "800", textAlign: "right", marginTop: 2 },
+  diagDetail: { color: "#6b6457", fontSize: 13, lineHeight: 20, textAlign: "right" },
+  agentLabel: {
+    color: "#9a917f",
+    fontSize: 11,
+    fontWeight: "800",
+    textAlign: "right",
+    marginTop: 6,
+  },
+  agentBody: { color: "#2f2a22", fontSize: 13.5, lineHeight: 21, textAlign: "right" },
+  qRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  qText: { color: "#2f2a22", fontSize: 13, textAlign: "right", flexShrink: 1 },
+  briefRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  briefText: { color: "#2f2a22", fontSize: 13, textAlign: "right", flexShrink: 1 },
+  agentNote: {
+    color: "#9a917f",
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 6,
+    fontStyle: "italic",
+  },
+
   // cta
   ctaContainer: {
     padding: 16,
@@ -339,26 +535,49 @@ const styles = StyleSheet.create({
     borderTopColor: "#e6dcc8",
     gap: 10,
   },
+  ctaRow: { flexDirection: "row", gap: 10 },
+  hospitalButton: {
+    backgroundColor: "#fdf8ec",
+    borderWidth: 1.5,
+    borderColor: "#b07d12",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  hospitalText: {
+    color: "#3d3424",
+    fontSize: 13.5,
+    fontWeight: "800",
+    flex: 1,
+    textAlign: "right",
+  },
+  hospitalEta: { flexDirection: "row", alignItems: "center", gap: 3 },
+  hospitalEtaText: { color: "#6b6457", fontSize: 12, fontWeight: "700" },
   ctaButton: {
+    flex: 1,
     backgroundColor: "#c2410c",
     borderRadius: 12,
     paddingVertical: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
   },
-  ctaText: { color: "#3d3424", fontSize: 16, fontWeight: "700" },
+  ctaText: { color: "#fff", fontSize: 13.5, fontWeight: "700" },
   locationButton: {
     backgroundColor: "#e6dcc8",
     borderWidth: 1,
     borderColor: "#cbbfa8",
     borderRadius: 12,
     paddingVertical: 14,
+    paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 8,
   },
-  locationText: { color: "#3d3424", fontSize: 15, fontWeight: "700" },
+  locationText: { color: "#3d3424", fontSize: 14, fontWeight: "700" },
 });

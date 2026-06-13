@@ -25,38 +25,41 @@ interface RegistryEntry {
 
 // Bracelet IDs → static pilgrim records. The QR carries just the ID.
 const REGISTRY: Record<string, RegistryEntry> = {
-  "SA-2024-NG-07231": {
-    id: "SA-2024-NG-07231",
-    name: "فاطمة عبدالله سيدي",
-    age: 74,
-    nationality: "نيجيريا",
-    passport: "SA-2024-NG-07231",
+  // Backend-linked bracelets — id == a real Pilgrim.patient_id in the CSV
+  // roster, so a scan resolves to live medical history + XGBoost triage.
+  // Vitals/risk below are the bracelet-sim layer (backend has no vitals).
+  "BE49325DE12B": {
+    id: "BE49325DE12B",
+    name: "Michelle Anderson",
+    age: 63,
+    nationality: "Ukraine",
+    passport: "BE49325DE12B",
     risk: "red",
     hr: 132, temp: 39.4, ox: 88, score: 0.91,
-    diabetes: true, heart: true, hypertension: true,
-    meds: ["أملوديبين 10mg", "ميتفورمين 500mg", "أسبرين 81mg"],
+    diabetes: true, heart: false, hypertension: true,
+    meds: null,
   },
-  "SA-2024-EG-04412": {
-    id: "SA-2024-EG-04412",
-    name: "محمد إبراهيم الفارسي",
-    age: 68,
-    nationality: "مصر",
-    passport: "SA-2024-EG-04412",
+  "3C27343B9F43": {
+    id: "3C27343B9F43",
+    name: "Rachel Smith",
+    age: 85,
+    nationality: "Solomon Islands",
+    passport: "3C27343B9F43",
     risk: "red",
     hr: 128, temp: 38.9, ox: 90, score: 0.84,
-    diabetes: false, heart: true, hypertension: true,
-    meds: ["بيسوبرولول 5mg", "أتورفاستاتين 20mg"],
+    diabetes: true, heart: false, hypertension: true,
+    meds: null,
   },
-  "SA-2024-ID-09887": {
-    id: "SA-2024-ID-09887",
-    name: "سيتي نور حسنة",
-    age: 62,
-    nationality: "إندونيسيا",
-    passport: "SA-2024-ID-09887",
+  "71A4E530EF26": {
+    id: "71A4E530EF26",
+    name: "Trevor Martin",
+    age: 35,
+    nationality: "Somalia",
+    passport: "71A4E530EF26",
     risk: "yellow",
     hr: 108, temp: 38.1, ox: 94, score: 0.58,
-    diabetes: true, heart: false, hypertension: true,
-    meds: ["ميتفورمين 850mg"],
+    diabetes: false, heart: true, hypertension: true,
+    meds: ["Diuretics", "Beta-Blockers"],
   },
   "SA-2024-TR-02156": {
     id: "SA-2024-TR-02156",
@@ -219,7 +222,49 @@ export function listRegistryIds(): string[] {
   return Object.keys(REGISTRY);
 }
 
+// Bracelets whose id is a real Pilgrim.patient_id in the CSV roster, so a scan
+// resolves to live medical history + XGBoost triage. Used to seed the recents
+// list from the DB and to drive the demo-scan button.
+export const BACKEND_BRACELET_IDS = [
+  "3C27343B9F43",
+  "BE49325DE12B",
+  "71A4E530EF26",
+] as const;
+
 export function randomRegistryId(): string {
   const ids = listRegistryIds();
   return ids[Math.floor(Math.random() * ids.length)];
+}
+
+// Demo-scan prefers a backend-linked bracelet so the detail screen always shows
+// real triage (not a local-only fallback record).
+export function randomBackendBraceletId(): string {
+  return BACKEND_BRACELET_IDS[
+    Math.floor(Math.random() * BACKEND_BRACELET_IDS.length)
+  ];
+}
+
+/**
+ * Seed "recent scans" from the DB: resolve each backend-linked bracelet (live
+ * history overlaid on the bracelet-sim vitals) and stagger the scan times so
+ * the list looks like a real recent-activity feed. Returns [] when the platform
+ * is unreachable for all of them.
+ */
+export async function seedRecentsFromDb(): Promise<ScannedPilgrim[]> {
+  const agesMinutes = [5, 18, 42];
+  const resolved = await Promise.all(
+    BACKEND_BRACELET_IDS.map((id) => resolveScannedPilgrim(id)),
+  );
+  return resolved
+    .map((entry, i) =>
+      entry
+        ? {
+            ...entry,
+            scannedAt: new Date(
+              Date.now() - agesMinutes[i] * 60 * 1000,
+            ).toISOString(),
+          }
+        : null,
+    )
+    .filter((e): e is ScannedPilgrim => e !== null);
 }

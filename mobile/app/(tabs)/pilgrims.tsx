@@ -11,101 +11,6 @@ import { ScanQrCode, ChevronLeft, Clock } from "lucide-react-native";
 import { useScanned, type ScannedPilgrim } from "@/lib/scanned-store";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 
-// ─── fake data ─────────────────────────────────────────────────────────────
-
-const FAKE: ScannedPilgrim[] = [
-  {
-    pilgrim: {
-      id: "1",
-      full_name: "محمد أحمد الفارسي",
-      age: 68,
-      nationality: "إيران",
-      passport_number: "SA-2024-IR-04892",
-      has_diabetes: true,
-      has_heart_condition: true,
-      has_hypertension: true,
-      medications: ["ميتوبرولول 50mg", "ميتفورمين 1000mg", "ليسينوبريل 10mg"],
-      created_at: new Date().toISOString(),
-    },
-    vitals: {
-      id: "v1",
-      pilgrim_id: "1",
-      heart_rate: 108,
-      temperature: 38.9,
-      oxygen_level: 94,
-      recorded_at: new Date().toISOString(),
-    },
-    risk: {
-      id: "r1",
-      pilgrim_id: "1",
-      risk_level: "red",
-      score: 0.94,
-      assessed_at: new Date().toISOString(),
-    },
-    scannedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-  },
-  {
-    pilgrim: {
-      id: "2",
-      full_name: "فاطمة عبدالله سيدي",
-      age: 74,
-      nationality: "نيجيريا",
-      passport_number: "SA-2024-NG-07231",
-      has_diabetes: false,
-      has_heart_condition: false,
-      has_hypertension: true,
-      medications: ["أملوديبين 10mg"],
-      created_at: new Date().toISOString(),
-    },
-    vitals: {
-      id: "v2",
-      pilgrim_id: "2",
-      heart_rate: 92,
-      temperature: 37.8,
-      oxygen_level: 96,
-      recorded_at: new Date().toISOString(),
-    },
-    risk: {
-      id: "r2",
-      pilgrim_id: "2",
-      risk_level: "red",
-      score: 0.88,
-      assessed_at: new Date().toISOString(),
-    },
-    scannedAt: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-  },
-  {
-    pilgrim: {
-      id: "3",
-      full_name: "أحمد رضا محمودي",
-      age: 71,
-      nationality: "باكستان",
-      passport_number: "SA-2024-PK-11045",
-      has_diabetes: true,
-      has_heart_condition: false,
-      has_hypertension: false,
-      medications: ["ميتفورمين 500mg"],
-      created_at: new Date().toISOString(),
-    },
-    vitals: {
-      id: "v3",
-      pilgrim_id: "3",
-      heart_rate: 88,
-      temperature: 39.2,
-      oxygen_level: 97,
-      recorded_at: new Date().toISOString(),
-    },
-    risk: {
-      id: "r3",
-      pilgrim_id: "3",
-      risk_level: "yellow",
-      score: 0.61,
-      assessed_at: new Date().toISOString(),
-    },
-    scannedAt: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-  },
-];
-
 // ─── helpers ───────────────────────────────────────────────────────────────
 
 function timeAgo(iso: string) {
@@ -176,9 +81,9 @@ function PilgrimRow({ item }: { item: ScannedPilgrim }) {
 export default function Pilgrims() {
   const { recents } = useScanned();
 
-  // use real recents if available, otherwise fall back to fake data for demo
-  const list = recents.length > 0 ? recents : FAKE;
-  const isEmpty = recents.length === 0 && FAKE.length === 0;
+  // Recents are seeded from the DB on launch and grow as bracelets are scanned.
+  const list = recents;
+  const isEmpty = recents.length === 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>

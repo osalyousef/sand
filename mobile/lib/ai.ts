@@ -2,11 +2,12 @@ import type { AIPrediction, VitalsInput } from "../types";
 
 const AI_URL = process.env.EXPO_PUBLIC_AI_URL || null;
 
-export async function getRiskLevel(data: VitalsInput): Promise<AIPrediction> {
-  if (!AI_URL) {
-    // Mock response — remove once teammates' FastAPI endpoint is live
-    return { risk_level: "yellow", score: 0.65 };
-  }
+// Returns null when the AI endpoint isn't configured (or unreachable) so callers
+// fall back to whatever risk they already have, rather than a fabricated value.
+export async function getRiskLevel(
+  data: VitalsInput,
+): Promise<AIPrediction | null> {
+  if (!AI_URL) return null;
 
   const res = await fetch(`${AI_URL}/predict`, {
     method: "POST",

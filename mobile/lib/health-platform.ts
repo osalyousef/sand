@@ -83,6 +83,36 @@ export async function fetchTriage(patientId: string): Promise<TriageResult | nul
   }
 }
 
+// ─── roster analytics (Data screen) ───────────────────────────────────────
+
+export interface PilgrimStats {
+  total_pilgrims: number;
+  risk_distribution: Record<RiskLevel, number>;
+  chronic_conditions: {
+    diabetes: number;
+    hypertension: number;
+    heart: number;
+    respiratory: number;
+    kidney: number;
+    none: number;
+  };
+}
+
+/** Aggregate roster analytics computed server-side from the imported dataset
+ *  (risk distribution + chronic-condition counts + total). Returns null when
+ *  the platform is unconfigured/unreachable so the Data screen falls back to
+ *  its built-in sample figures. */
+export async function fetchStats(): Promise<PilgrimStats | null> {
+  if (!HP_URL) return null;
+  try {
+    const res = await fetch(`${HP_URL}/api/pilgrims/stats/`);
+    if (!res.ok) return null;
+    return (await res.json()) as PilgrimStats;
+  } catch {
+    return null;
+  }
+}
+
 // ─── mapping helpers: free-text medical fields → our typed shape ───────────
 
 /** Split a medication string into a clean array. The platform separates meds

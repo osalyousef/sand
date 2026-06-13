@@ -48,18 +48,19 @@
 html.light {
   color-scheme: light;
 
-  /* surfaces: page ivory, panels white, beige borders/soft buttons */
-  --color-gray-950: #f4f1ea;
-  --color-gray-900: #ffffff;
-  --color-gray-800: #e6e2d6;
-  --color-gray-700: #d5d0bf;
-  --color-gray-600: #97917e;
-  --color-gray-500: #7b7563;
-  --color-gray-400: #5d5848;
-  --color-gray-300: #444033;
-  --color-gray-200: #2c2a22;
-  /* headings use text-white — becomes deep green-black on light */
-  --color-white: #1d2b27;
+  /* surfaces: warm cream page + raised cream panels + beige borders, matching
+     the mobile app's Nusuk palette (bg #f7f0e1 / raised #fdf8ec) */
+  --color-gray-950: #f7f0e1;
+  --color-gray-900: #fdf8ec;
+  --color-gray-800: #e6dcc8;
+  --color-gray-700: #d8ccb2;
+  --color-gray-600: #9a917f;
+  --color-gray-500: #6b6457;
+  --color-gray-400: #544b39;
+  --color-gray-300: #3d3424;
+  --color-gray-200: #2a2620;
+  /* headings use text-white — becomes the app's warm dark brown on light */
+  --color-white: #3d3424;
 
   /* Nusuk green (replaces teal accent) */
   --color-emerald-200: #0b3f35;
@@ -111,9 +112,9 @@ html.light [class*="bg-purple-700"] {
 
 html.light body {
   background:
-    radial-gradient(1100px 520px at 50% -8%, rgb(15 74 62 / 0.05), transparent 60%),
-    radial-gradient(900px 480px at 88% 112%, rgb(176 141 87 / 0.07), transparent 60%),
-    #f4f1ea;
+    radial-gradient(1100px 520px at 50% -8%, rgb(31 138 128 / 0.05), transparent 60%),
+    radial-gradient(900px 480px at 88% 112%, rgb(176 125 18 / 0.08), transparent 60%),
+    #f7f0e1;
 }
 
 html.light .grid-lines {
@@ -123,28 +124,28 @@ html.light .grid-lines {
 }
 
 html.light [data-tip]:hover::after {
-  background: #ffffff;
-  border-color: #d5d0bf;
-  color: #2c2a22;
-  box-shadow: 0 4px 14px rgb(29 43 39 / 0.18);
+  background: #fdf8ec;
+  border-color: #d8ccb2;
+  color: #2a2620;
+  box-shadow: 0 4px 14px rgb(61 52 36 / 0.18);
 }
 
-html.light *::-webkit-scrollbar-thumb { background: #cfc9b8; }
-html.light *::-webkit-scrollbar-thumb:hover { background: #b8b19c; }
+html.light *::-webkit-scrollbar-thumb { background: #d8ccb2; }
+html.light *::-webkit-scrollbar-thumb:hover { background: #cbbfa8; }
 
 html.light .skeleton {
-  background: linear-gradient(90deg, #e9e5d9 25%, #f3f0e7 50%, #e9e5d9 75%);
+  background: linear-gradient(90deg, #ece3d0 25%, #f7f0e1 50%, #ece3d0 75%);
   background-size: 200% 100%;
 }
 
 html.light .leaflet-tooltip {
-  background: #ffffff;
-  border-color: #d5d0bf;
-  color: #2c2a22;
-  box-shadow: 0 4px 12px rgb(29 43 39 / 0.18);
+  background: #fdf8ec;
+  border-color: #d8ccb2;
+  color: #2a2620;
+  box-shadow: 0 4px 12px rgb(61 52 36 / 0.18);
 }
-html.light .leaflet-tooltip-top::before { border-top-color: #d5d0bf; }
-html.light .leaflet-tooltip-bottom::before { border-bottom-color: #d5d0bf; }
+html.light .leaflet-tooltip-top::before { border-top-color: #d8ccb2; }
+html.light .leaflet-tooltip-bottom::before { border-bottom-color: #d8ccb2; }
 
 html.light .landmark-tooltip {
   background: rgba(255, 255, 255, 0.85);
@@ -158,11 +159,11 @@ html.light .leaflet-control-attribution {
 html.light .leaflet-control-attribution a { color: #5d5848 !important; }
 
 html.light .leaflet-control-zoom a {
-  background: #ffffff !important;
-  color: #2c2a22 !important;
-  border-color: #d5d0bf !important;
+  background: #fdf8ec !important;
+  color: #2a2620 !important;
+  border-color: #d8ccb2 !important;
 }
-html.light .leaflet-control-zoom a:hover { background: #f0ede3 !important; }
+html.light .leaflet-control-zoom a:hover { background: #f1ead9 !important; }
 
 /* ---------- Ambient depth ---------- */
 

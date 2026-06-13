@@ -7,10 +7,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Marker, Circle, Polygon } from "react-native-maps";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Flame, MapPin, ChevronLeft, Thermometer } from "lucide-react-native";
+import { ChevronLeft, Thermometer, Users, Navigation } from "lucide-react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 import type { ScannedPilgrim } from "@/lib/scanned-store";
+import { FIELD_TEAMS, TEAM_STATUS_META } from "@/lib/ops-data";
+import { getCellRecommendation } from "@/lib/agents";
 
 // ─── constants ─────────────────────────────────────────────────────────────
 
@@ -45,7 +47,9 @@ const HEAT_CENTER = {
   longitudeDelta: INITIAL_REGION.longitudeDelta,
 };
 
-const CELL_METERS = 100;
+// 180m cells keep the heat field smooth while holding the rendered polygon
+// count to a few hundred — react-native-maps hangs past ~1k native overlays.
+const CELL_METERS = 180;
 const M_PER_DEG_LAT = 111_320;
 const M_PER_DEG_LNG = 111_320 * Math.cos((HEAT_CENTER.latitude * Math.PI) / 180);
 const CELL_LAT = CELL_METERS / M_PER_DEG_LAT;
@@ -120,8 +124,22 @@ interface HeatCell {
   nt: number; // base intensity ∈ [0,1] at full temperature
 }
 
-// Bin the area into 100m cells; keep only cells warm enough to be visible.
-function buildHeatGrid(): HeatCell[] {
+// Crowd-density field at any point — sum of the hotspot gaussians. Used both to
+// build the grid and to score an arbitrary tapped coordinate (no per-cell
+// handlers needed).
+function densityAt(lat: number, lng: number): number {
+  let d = 0;
+  for (const h of HOTSPOTS) {
+    const dLat = (lat - h.lat) * M_PER_DEG_LAT;
+    const dLng = (lng - h.lng) * M_PER_DEG_LNG;
+    d += h.w * Math.exp(-(dLat * dLat + dLng * dLng) / (2 * h.sigma * h.sigma));
+  }
+  return d;
+}
+
+// Bin the area into cells; keep only cells warm enough to be visible. Returns
+// the field max too, so a tapped point can be normalised the same way.
+function buildHeatGrid(): { cells: HeatCell[]; max: number } {
   const rows = Math.ceil((HEAT_AREA.latMax - HEAT_AREA.latMin) / CELL_LAT);
   const cols = Math.ceil((HEAT_AREA.lngMax - HEAT_AREA.lngMin) / CELL_LNG);
   const raw: { coords: HeatCell["coords"]; d: number }[] = [];
@@ -131,16 +149,7 @@ function buildHeatGrid(): HeatCell[] {
     for (let c = 0; c < cols; c++) {
       const south = HEAT_AREA.latMin + r * CELL_LAT;
       const west = HEAT_AREA.lngMin + c * CELL_LNG;
-      const clat = south + CELL_LAT / 2;
-      const clng = west + CELL_LNG / 2;
-
-      let d = 0;
-      for (const h of HOTSPOTS) {
-        const dLat = (clat - h.lat) * M_PER_DEG_LAT;
-        const dLng = (clng - h.lng) * M_PER_DEG_LNG;
-        const dist2 = dLat * dLat + dLng * dLng;
-        d += h.w * Math.exp(-dist2 / (2 * h.sigma * h.sigma));
-      }
+      const d = densityAt(south + CELL_LAT / 2, west + CELL_LNG / 2);
       if (d > max) max = d;
       raw.push({
         coords: [
@@ -154,9 +163,10 @@ function buildHeatGrid(): HeatCell[] {
     }
   }
 
-  return raw
+  const cells = raw
     .map((cell) => ({ coords: cell.coords, nt: cell.d / (max || 1) }))
-    .filter((cell) => cell.nt >= 0.04); // drop near-black background cells
+    .filter((cell) => cell.nt >= 0.05); // drop near-black background cells
+  return { cells, max };
 }
 
 // ─── types ─────────────────────────────────────────────────────────────────
@@ -170,7 +180,6 @@ interface PilgrimPin {
   location: string;
 }
 
-type Filter = RiskLevel | "all";
 type ViewMode = "pins" | "heat";
 
 // ─── mock data ─────────────────────────────────────────────────────────────
@@ -217,8 +226,8 @@ const DARK_MAP_STYLE = [
   { featureType: "road", elementType: "geometry", stylers: [{ color: "#fdf8ec" }] },
   { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#e6dcc8" }] },
   { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9a917f" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#f7e6cf" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#9a3412" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#f3e7c8" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#8a6a2e" }] },
   { featureType: "transit", stylers: [{ visibility: "off" }] },
   { featureType: "water", elementType: "geometry", stylers: [{ color: "#cfe3ee" }] },
   { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#6b6457" }] },
@@ -271,15 +280,36 @@ export default function MapScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ focus?: string }>();
   const [selected, setSelected] = useState<PilgrimPin | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [mode, setMode] = useState<ViewMode>("pins");
+  const [mode, setMode] = useState<ViewMode>("heat");
+  const [showTeams, setShowTeams] = useState(true);
+  const [routeCell, setRouteCell] = useState<{
+    landmark: string;
+    intensity: number;
+    rec: ReturnType<typeof getCellRecommendation>;
+  } | null>(null);
   const mapRef = useRef<MapView>(null);
 
   const temp = HEAT_TEMP;
   const scale = tempScale(temp);
 
   // Grid is geometry-only — computed once, recolored per temperature.
-  const heatCells = useMemo(() => buildHeatGrid(), []);
+  const { cells: heatCells, max: fieldMax } = useMemo(() => buildHeatGrid(), []);
+
+  // Pre-build the polygon elements so unrelated state changes (selection,
+  // teams, route card) don't rebuild a few hundred overlays every render.
+  const heatPolygons = useMemo(
+    () =>
+      heatCells.map((cell, i) => (
+        <Polygon
+          key={i}
+          coordinates={cell.coords}
+          strokeWidth={0}
+          strokeColor="transparent"
+          fillColor={heatFill(cell.nt * scale)}
+        />
+      )),
+    [heatCells, scale],
+  );
 
   // Frame the Mina box when entering heat mode (matches the dashboard view).
   useEffect(() => {
@@ -322,19 +352,6 @@ export default function MapScreen() {
     return () => clearTimeout(t);
   }, []);
 
-  const visible = useMemo(
-    () => (filter === "all" ? PILGRIMS : PILGRIMS.filter((p) => p.risk === filter)),
-    [filter],
-  );
-
-  const counts = useMemo(
-    () => ({
-      red:    PILGRIMS.filter((p) => p.risk === "red").length,
-      yellow: PILGRIMS.filter((p) => p.risk === "yellow").length,
-      green:  PILGRIMS.filter((p) => p.risk === "green").length,
-    }),
-    [],
-  );
 
   const flyTo = (lat: number, lng: number, delta: number) => {
     mapRef.current?.animateToRegion(
@@ -343,27 +360,59 @@ export default function MapScreen() {
     );
   };
 
+  // Background tap: in heat mode «دليل» scores the tapped point and recommends
+  // routing; otherwise it just dismisses any open card.
+  const onMapPress = (e: { nativeEvent: { coordinate: { latitude: number; longitude: number } } }) => {
+    setSelected(null);
+    if (mode !== "heat") {
+      // Pins mode is only entered via «عرض على الخريطة»; tapping the map clears
+      // that focus and drops back to the heat field (no toggle button anymore).
+      setRouteCell(null);
+      setMode("heat");
+      return;
+    }
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    const intensity = (densityAt(latitude, longitude) / (fieldMax || 1)) * scale;
+    if (intensity < 0.05) {
+      setRouteCell(null); // tapped a cold area
+      return;
+    }
+    const nearest = SITES.reduce(
+      (best, s) => {
+        const d = (s.lat - latitude) ** 2 + (s.lng - longitude) ** 2;
+        return d < best.d ? { label: s.label, d } : best;
+      },
+      { label: SITES[0].label, d: Infinity },
+    ).label;
+    setRouteCell({ landmark: nearest, intensity, rec: getCellRecommendation(intensity, nearest) });
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       {/* header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.modeBtn}
-          onPress={() => setMode(mode === "pins" ? "heat" : "pins")}
-          activeOpacity={0.7}
-        >
-          {mode === "pins" ? (
-            <Flame color="#f97316" size={16} />
-          ) : (
-            <MapPin color="#cbbfa8" size={16} />
-          )}
-          <Text style={styles.modeBtnText}>
-            {mode === "pins" ? "حرارة" : "نقاط"}
-          </Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {mode === "heat" ? "الخريطة الحرارية" : "خريطة الحجاج"}
-        </Text>
+        <View style={styles.headerBtns}>
+          <TouchableOpacity
+            style={[
+              styles.modeBtn,
+              showTeams && { borderColor: "#1f8a80", backgroundColor: "rgba(31,138,128,0.1)" },
+            ]}
+            onPress={() => setShowTeams((v) => !v)}
+            activeOpacity={0.7}
+          >
+            <Users color={showTeams ? "#1f8a80" : "#cbbfa8"} size={15} />
+            <Text style={styles.modeBtnText}>الفرق</Text>
+          </TouchableOpacity>
+        </View>
+        {mode === "heat" ? (
+          <View style={styles.tempBadge}>
+            <Thermometer color={inferno(scale)} size={18} />
+            <Text style={styles.tempValue}>{temp}°م</Text>
+            <Text style={styles.tempCaption}>مؤشر الحرارة · منى</Text>
+          </View>
+        ) : (
+          <Text style={styles.headerTitle}>خريطة الحجاج</Text>
+        )}
       </View>
 
       {/* site jump bar — both modes */}
@@ -380,74 +429,59 @@ export default function MapScreen() {
         ))}
       </View>
 
-      {/* risk filter bar — pins mode only */}
-      {mode === "pins" && (
-        <View style={styles.filterBar}>
-          {(["red", "yellow", "green"] as RiskLevel[]).map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.chip,
-                filter === level && {
-                  borderColor: RISK_COLORS[level],
-                  backgroundColor: `${RISK_COLORS[level]}18`,
-                },
-              ]}
-              onPress={() => setFilter(filter === level ? "all" : level)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.chipDot, { backgroundColor: RISK_COLORS[level] }]} />
-              <Text style={styles.chipLabel}>{RISK_LABELS[level]}</Text>
-              <Text style={[styles.chipCount, { color: RISK_COLORS[level] }]}>
-                {counts[level]}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-
       {/* map */}
       <MapView
         ref={mapRef}
         style={styles.map}
         initialRegion={INITIAL_REGION}
-        minZoomLevel={11}
-        maxZoomLevel={18}
-        onPress={() => setSelected(null)}
+        // iOS-only zoom cap. Replaces minZoomLevel/maxZoomLevel, which drove an
+        // infinite applyLegacyZoomConstrains recursion (stack-overflow crash).
+        // Distances are camera-to-center meters: ~250m in ≈ z18, ~12km out ≈ z11.
+        cameraZoomRange={{
+          minCenterCoordinateDistance: 250,
+          maxCenterCoordinateDistance: 12000,
+          animated: true,
+        }}
+        onPress={onMapPress}
         showsPointsOfInterests={false}
         showsBuildings
         showsCompass={false}
         userInterfaceStyle="light"
         customMapStyle={DARK_MAP_STYLE}
       >
-        {mode === "pins" &&
-          visible.map((pin) => {
-            const color = RISK_COLORS[pin.risk];
+        {/* Only the location opened from a pilgrim card is shown — no roster pins. */}
+        {mode === "pins" && selected && (
+          <Marker
+            coordinate={{ latitude: selected.lat, longitude: selected.lng }}
+            tracksViewChanges={false}
+          >
+            <View style={[styles.pin, { borderColor: RISK_COLORS[selected.risk] }]}>
+              <View style={[styles.pinCore, { backgroundColor: RISK_COLORS[selected.risk] }]} />
+            </View>
+          </Marker>
+        )}
+
+        {mode === "heat" && heatPolygons}
+
+        {/* field teams — both modes */}
+        {showTeams &&
+          FIELD_TEAMS.map((team) => {
+            const color = TEAM_STATUS_META[team.status].color;
             return (
               <Marker
-                key={pin.id}
-                coordinate={{ latitude: pin.lat, longitude: pin.lng }}
-                onPress={() => setSelected(pin)}
+                key={team.id}
+                coordinate={{ latitude: team.lat, longitude: team.lng }}
+                onPress={() => {
+                  setRouteCell(null);
+                  setSelected(null);
+                  flyTo(team.lat, team.lng, 0.012);
+                }}
                 tracksViewChanges={false}
               >
-                <View style={[styles.pin, { borderColor: color }]}>
-                  <View style={[styles.pinCore, { backgroundColor: color }]} />
+                <View style={[styles.teamMarker, { borderColor: color }]}>
+                  <Users color={color} size={11} strokeWidth={2.4} />
                 </View>
               </Marker>
-            );
-          })}
-
-        {mode === "heat" &&
-          heatCells.map((cell, i) => {
-            const t = cell.nt * scale;
-            return (
-              <Polygon
-                key={i}
-                coordinates={cell.coords}
-                strokeWidth={0}
-                strokeColor="transparent"
-                fillColor={heatFill(t)}
-              />
             );
           })}
 
@@ -461,15 +495,6 @@ export default function MapScreen() {
           />
         )}
       </MapView>
-
-      {/* temperature badge — heat mode */}
-      {mode === "heat" && (
-        <View style={styles.tempBadge}>
-          <Thermometer color={inferno(scale)} size={18} />
-          <Text style={styles.tempValue}>{temp}°م</Text>
-          <Text style={styles.tempCaption}>مؤشر الحرارة · منى</Text>
-        </View>
-      )}
 
       {/* callout — pins mode */}
       {mode === "pins" && selected && (
@@ -489,6 +514,7 @@ export default function MapScreen() {
             onPress={(e) => {
               e.stopPropagation();
               setSelected(null);
+              setMode("heat");
             }}
             hitSlop={10}
           >
@@ -497,13 +523,44 @@ export default function MapScreen() {
         </TouchableOpacity>
       )}
 
+      {/* «دليل» routing recommendation — heat cell tap */}
+      {routeCell && (
+        <View style={styles.routeCard}>
+          <View style={styles.routeHead}>
+            <TouchableOpacity onPress={() => setRouteCell(null)} hitSlop={10}>
+              <Text style={styles.calloutClose}>✕</Text>
+            </TouchableOpacity>
+            <View style={styles.routeTitleGroup}>
+              <View style={styles.routeAgentRow}>
+                <Text style={styles.routeAgent}>دليل · وكيل التوجيه</Text>
+                <Navigation color="#b07d12" size={13} />
+              </View>
+              <Text style={styles.routeLandmark}>{routeCell.landmark}</Text>
+            </View>
+          </View>
+          <Text style={styles.routeBody}>{routeCell.rec.headline}</Text>
+          <View style={styles.routeFooter}>
+            <Text style={styles.routeIntensity}>
+              كثافة {Math.round(routeCell.intensity * 100)}٪
+            </Text>
+            <Text style={styles.routeTeams}>
+              {routeCell.rec.teams > 0
+                ? `فرق موصى بها: ${routeCell.rec.teams}`
+                : "لا حاجة لسحب فريق"}
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* legend */}
       {mode === "pins" ? (
         <View style={styles.legend}>
-          {(["red", "yellow", "green"] as RiskLevel[]).map((level) => (
-            <View key={level} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: RISK_COLORS[level] }]} />
-              <Text style={styles.legendText}>{RISK_LABELS[level]}</Text>
+          {(["available", "dispatched", "on-scene"] as const).map((s) => (
+            <View key={s} style={styles.legendItem}>
+              <View
+                style={[styles.legendDot, { backgroundColor: TEAM_STATUS_META[s].color }]}
+              />
+              <Text style={styles.legendText}>{TEAM_STATUS_META[s].label}</Text>
             </View>
           ))}
         </View>
@@ -538,6 +595,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#e6dcc8",
   },
   headerTitle: { color: "#3d3424", fontSize: 18, fontWeight: "700" },
+  headerBtns: { flexDirection: "row", gap: 8 },
   modeBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -569,32 +627,6 @@ const styles = StyleSheet.create({
   },
   siteChipText: { color: "#3d3424", fontSize: 13, fontWeight: "700" },
 
-  filterBar: {
-    flexDirection: "row",
-    backgroundColor: "#f7f0e1",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e6dcc8",
-  },
-  chip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 5,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "#e6dcc8",
-    backgroundColor: "#fdf8ec",
-  },
-  chipDot: { width: 8, height: 8, borderRadius: 4 },
-  chipLabel: { color: "#3f3a30", fontSize: 12, fontWeight: "600" },
-  chipCount: { fontSize: 13, fontWeight: "800" },
-
   map: { flex: 1 },
 
   pin: {
@@ -616,6 +648,55 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
+
+  teamMarker: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    backgroundColor: "#fdf8ec",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+
+  routeCard: {
+    position: "absolute",
+    bottom: 60,
+    left: 12,
+    right: 12,
+    backgroundColor: "#fdf8ec",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#b07d12",
+    padding: 14,
+    gap: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  routeHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  routeTitleGroup: { flex: 1, alignItems: "flex-end" },
+  routeAgentRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  routeAgent: { color: "#8a6a2e", fontSize: 11, fontWeight: "800" },
+  routeLandmark: { color: "#3d3424", fontSize: 15, fontWeight: "800", marginTop: 2 },
+  routeBody: { color: "#2f2a22", fontSize: 13, lineHeight: 20, textAlign: "right" },
+  routeFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "#e6dcc8",
+    paddingTop: 8,
+  },
+  routeIntensity: { color: "#9a917f", fontSize: 12, fontWeight: "700" },
+  routeTeams: { color: "#c2410c", fontSize: 12.5, fontWeight: "800" },
 
   callout: {
     marginHorizontal: 12,
@@ -657,18 +738,20 @@ const styles = StyleSheet.create({
   rampCell: { width: 22, height: 10 },
 
   tempBadge: {
-    position: "absolute",
-    top: 70,
-    right: 12,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
-    backgroundColor: "rgba(13,13,13,0.85)",
+    backgroundColor: "#fdf8ec",
     borderWidth: 1,
     borderColor: "#e6dcc8",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   tempValue: { color: "#3d3424", fontSize: 18, fontWeight: "800" },
   tempCaption: { color: "#6b6457", fontSize: 11, fontWeight: "600", marginRight: 2 },
