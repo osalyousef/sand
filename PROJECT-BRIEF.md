@@ -103,14 +103,14 @@ The main operations screen. Three regions:
 The mobile app serves **two personas** through a 5-tab bottom nav:
 
 ### The 5 tabs:
-1. **«الرئيسية» (Home)** — heat alert banner, environmental row (temp/humidity/crowding/season), list of nearby **critical cases** (name, nationality, age, zone, vitals, risk badge).
+1. **«الرئيسية» (Home)** — heat alert banner, a **Tinder-style swipeable environmental deck** (per-site feels-like temp, humidity, wind, crowd level — swipe through Mina/Arafat/Muzdalifah), a quick-link to Health Institutions, and a **راصد ops-insights summary** (2 cards + «عرض الكل» → the `/insights` feed).
 2. **«الحجاج» (Pilgrims)** — list of recently scanned pilgrims with risk level, vitals, time-ago. Tap → full record.
 3. **«الخريطة» (Map)** — native map of the Hajj corridor (Haram→Mina→Muzdalifah→Arafat) with the same 100m thermal heat field as the web dashboard, plus pilgrim pins. Deep-linkable to focus a specific pilgrim.
 4. **«المسح» (Scan)** — **QR bracelet scanner** (expo-camera). Scan a pilgrim's wristband QR → instantly resolves their full medical record. Has a "simulate scan for demo" button. The QR carries only the pilgrim ID; the record is fetched from the registry / health platform.
 5. **«البلاغات» (Dispatch / Reports)** — field responder's inbox. Live dispatches from the ops room ("operations room connected" status), each with risk, zone, vitals, reason. Responder taps → "Accept mission — I'm on my way" (status → en-route) or "Locate on map".
 
 ### Key mobile screens (outside tabs):
-- **Pilgrim Health Card (`pilgrim.tsx`)** — the PILGRIM's own view. A tabbed home: **«اليوم» (Today)** = medication schedule (taken/now/upcoming) + hydration tracker (6/9 glasses); **«بطاقتي» (My Card)** = QR code of their bracelet ID + risk level + conditions; **«الطوارئ» (Emergency)** = one-tap call/chat to the hotline.
+- **Pilgrim Health Card (`pilgrim.tsx`)** — the PILGRIM's own view. A tabbed home: **«اليوم» (Today)** = a **مُغيث health-assistant card** (live assessment + guidance addressed to the pilgrim) + medication schedule (taken/now/upcoming) + a **حارس preventive-guardian card** (one prioritised heat/hydration/meds nudge); **«بطاقتي» (My Card)** = Nusuk health card with QR of their bracelet ID + risk level + conditions; **«الطوارئ» (Emergency)** = one-tap call/chat to the hotline.
 - **Call screen (`call.tsx`)** — simulated emergency call with a pre-scripted **bilingual exchange** (e.g. an Indonesian pilgrim: "Halo, tolong! Saya tersesat di Mina..." → live Arabic translation "مرحبًا، أرجوكم! أنا تائهة في منى..."), with typing animation, AI translation indicators, mute/speaker controls.
 - **Pilgrim detail (`pilgrim/[id].tsx`)** — full scanned record: conditions, medications, vitals, risk.
 
@@ -249,6 +249,14 @@ Nothing auto-executes. The human is always the trigger.
 A single case flows through multiple agents across both apps:
 **راصد** spots a surge → **دليل** routes teams → operator dispatches → **مُغيث** (dashboard) guides the call & sends a field brief → **مُهيّئ** (mobile) preps the responder en-route in the pilgrim's language → responder scans the QR → **موثِّق** drafts the discharge → **مُسلِّم** rolls it into the shift handoff. Meanwhile **حارس** works upstream to prevent the case from ever opening.
 
+### Tools vs Agents — an honest distinction (be ready for this judge question)
+We deliberately do NOT inflate the agent count by labelling every AI capability an "agent." There's a clean line:
+
+- **A capability / tool** = a transform with no judgment: input → output. Examples in Sanad: **real-time translation** (Arabic ↔ pilgrim's language), **speech-to-text / voice broadcast**, **OCR/QR decode**, the **risk-scoring model** (`getRiskLevel`). These don't *decide* anything — they convert.
+- **An agent** = something that reasons toward a goal and *suggests an action with a rationale*. مُغيث doesn't translate — it **diagnoses and decides** "suspected heat stress, dispatch a team," then uses translation as a tool to deliver its guidance in the pilgrim's language.
+
+So **real-time translation is a tool the agents use, not an agent.** Saying this out loud earns credibility with technical judges. (If we ever wanted a translation *agent* — «مُترجم» — it would have to add judgment on top of translation: auto-detect the pilgrim's language, pick the right dialect, preserve medical urgency in tone, and simplify clinical terms for a layperson. Until it makes those decisions, it stays a tool.)
+
 ---
 
 ## 7. DATA MODEL (shared contract)
@@ -274,7 +282,7 @@ A single case flows through multiple agents across both apps:
 | Web dashboard | Next.js 16, React 19, TypeScript, Tailwind 4, Leaflet/CARTO, zustand, lucide-react |
 | Mobile app | React Native 0.85, Expo 56, expo-router, react-native-maps, expo-camera, QR codes |
 | Database | Supabase (Postgres + Realtime), open RLS for demo |
-| AI | FastAPI risk endpoint + 7-agent LLM layer (single swap point `lib/agents.ts`) |
+| AI | FastAPI risk endpoint + 9-agent LLM layer (7 dashboard + 2 mobile-native; single swap point `lib/agents.ts`) |
 | Health records | Django "Hajj Health Platform" integration (teammates' backend) |
 | Hosting | Vercel (dashboard, permanent link) |
 | Design | Arabic-first RTL, warm "Nusuk" light/dark theme, deterministic seeded mock data |
