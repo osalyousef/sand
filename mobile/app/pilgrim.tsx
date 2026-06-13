@@ -20,15 +20,15 @@ import {
   ChevronLeft,
   MapPin,
   PlusCircle,
-  Sun,
   HeartPulse,
   Sparkles,
   Stethoscope,
+  ShieldCheck,
 } from "lucide-react-native";
 import QRCode from "react-native-qrcode-svg";
 import { RISK_COLORS, type RiskLevel } from "@/types";
 import HealthCard from "@/components/HealthCard";
-import { getResponseSuggestion, AGENTS } from "@/lib/agents";
+import { getResponseSuggestion, getGuardianAdvisory, AGENTS } from "@/lib/agents";
 import type { ScannedPilgrim } from "@/lib/scanned-store";
 
 I18nManager.forceRTL(true);
@@ -125,6 +125,15 @@ const ME_ENTRY: ScannedPilgrim = {
   scannedAt: NOW,
 };
 const ME_SUGGESTION = getResponseSuggestion(ME_ENTRY);
+
+// «حارس» — proactive guardian: watches heat + hydration + due meds and raises
+// one preventive nudge before any emergency. Demo context: extreme heat, the
+// pilgrim hasn't had water in 2h → it warns before a case is ever opened.
+const ME_GUARDIAN = getGuardianAdvisory({
+  tempC: 44,
+  hoursSinceWater: 2,
+  medDueNow: false,
+});
 
 const RISK_LABEL: Record<RiskLevel, string> = {
   red: "مرتفع",
@@ -239,14 +248,32 @@ function TabToday({
         })}
       </View>
 
-      {/* weather advisory */}
-      <View style={styles.advisory}>
-        <Text style={styles.advisoryText}>
-          الحرارة ٤٤°م — تجنّب الشمس بين ١١ و٣
-        </Text>
-        <Sun color={SN.fg3} size={15} strokeWidth={1.7} />
-      </View>
+      {/* «حارس» — proactive preventive guardian */}
+      <GuardianCard />
     </ScrollView>
+  );
+}
+
+// «حارس» — the pilgrim's pocket guardian. Surfaces one prioritised preventive
+// nudge (color-coded by severity) before any emergency, with the single action
+// to take now.
+function GuardianCard() {
+  const sev = RISK_COLORS[ME_GUARDIAN.severity];
+  return (
+    <View style={[styles.guardian, { borderColor: sev }]}>
+      <View style={styles.guardianHead}>
+        <Text style={styles.guardianRole}>{AGENTS.guardian.role}</Text>
+        <View style={styles.guardianNameRow}>
+          <Text style={styles.guardianName}>{AGENTS.guardian.name}</Text>
+          <ShieldCheck color={sev} size={15} strokeWidth={2} />
+        </View>
+      </View>
+      <Text style={[styles.guardianTitle, { color: sev }]}>{ME_GUARDIAN.title}</Text>
+      <Text style={styles.guardianDetail}>{ME_GUARDIAN.detail}</Text>
+      <View style={[styles.guardianAction, { backgroundColor: `${sev}14`, borderColor: `${sev}55` }]}>
+        <Text style={[styles.guardianActionText, { color: sev }]}>{ME_GUARDIAN.action}</Text>
+      </View>
+    </View>
   );
 }
 
@@ -745,6 +772,33 @@ const styles = StyleSheet.create({
     paddingTop: 4,
   },
   advisoryText: { fontSize: 11.5, color: SN.fg3, lineHeight: 18 },
+
+  // «حارس» guardian card
+  guardian: {
+    backgroundColor: SN.bgRaised,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 7,
+  },
+  guardianHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  guardianRole: { color: SN.fg3, fontSize: 11, fontWeight: "600" },
+  guardianNameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  guardianName: { color: SN.fg1, fontSize: 15, fontWeight: "800" },
+  guardianTitle: { fontSize: 14, fontWeight: "800", textAlign: "right" },
+  guardianDetail: { color: SN.fg2, fontSize: 12.5, lineHeight: 20, textAlign: "right" },
+  guardianAction: {
+    borderWidth: 1,
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 2,
+  },
+  guardianActionText: { fontSize: 13, fontWeight: "700", textAlign: "right", lineHeight: 20 },
 
   // identity card
   idTopRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },

@@ -18,8 +18,13 @@ import {
   Navigation,
   Radio,
   ChevronLeft,
+  Sparkles,
+  Languages,
+  PackageCheck,
+  AlertTriangle,
 } from "lucide-react-native";
 import { RISK_COLORS, type RiskLevel } from "@/types";
+import { AGENTS, getPreArrivalBrief } from "@/lib/agents";
 
 interface Dispatch {
   id: string;
@@ -220,6 +225,9 @@ export default function DispatchScreen() {
                   <Text style={styles.sheetInfoText}>{active.zone}</Text>
                 </View>
 
+                {/* «مُهيّئ» pre-arrival prep — appears once the mission is accepted */}
+                {accepted[active.id] && <PreArrivalCard dispatch={active} />}
+
                 {/* actions */}
                 <TouchableOpacity
                   style={[
@@ -258,6 +266,68 @@ export default function DispatchScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+  );
+}
+
+// «مُهيّئ» — turns travel time into preparation. From the dispatch it derives
+// the pilgrim's language (with a phrase to greet them), an equipment checklist
+// tuned to the suspected condition, and critical heads-up flags.
+function PreArrivalCard({ dispatch }: { dispatch: Dispatch }) {
+  const brief = getPreArrivalBrief({
+    nationality: dispatch.nationality,
+    reason: dispatch.reason,
+    vitals: dispatch.vitals,
+    age: dispatch.age,
+  });
+
+  return (
+    <View style={styles.prepCard}>
+      <View style={styles.prepHeader}>
+        <Text style={styles.prepRole}>{AGENTS.prearrival.role}</Text>
+        <View style={styles.prepNameRow}>
+          <Text style={styles.prepName}>{AGENTS.prearrival.name}</Text>
+          <Sparkles color="#b07d12" size={14} strokeWidth={2} />
+        </View>
+      </View>
+      <Text style={styles.prepIntro}>جهّز نفسك قبل الوصول — الحالة بين يديك الآن:</Text>
+
+      {/* language + greeting */}
+      <View style={styles.prepBlock}>
+        <View style={styles.prepBlockHead}>
+          <Text style={styles.prepBlockTitle}>لغة الحاج: {brief.language}</Text>
+          <Languages color="#1f8a80" size={14} />
+        </View>
+        <Text style={styles.prepGreeting}>«{brief.greeting}»</Text>
+      </View>
+
+      {/* prep checklist */}
+      <View style={styles.prepBlock}>
+        <View style={styles.prepBlockHead}>
+          <Text style={styles.prepBlockTitle}>جهّز قبل الوصول</Text>
+          <PackageCheck color="#1f8a80" size={14} />
+        </View>
+        {brief.prep.map((item) => (
+          <View key={item} style={styles.prepItem}>
+            <Text style={styles.prepItemText}>{item}</Text>
+            <View style={styles.prepBullet} />
+          </View>
+        ))}
+      </View>
+
+      {/* critical flags */}
+      <View style={styles.prepBlock}>
+        <View style={styles.prepBlockHead}>
+          <Text style={[styles.prepBlockTitle, { color: "#b5432b" }]}>تنبيهات حرجة</Text>
+          <AlertTriangle color="#b5432b" size={14} />
+        </View>
+        {brief.flags.map((f) => (
+          <View key={f} style={styles.prepItem}>
+            <Text style={styles.prepFlagText}>{f}</Text>
+            <View style={[styles.prepBullet, { backgroundColor: "#b5432b" }]} />
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -460,4 +530,62 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   locateText: { color: "#b07d12", fontSize: 14, fontWeight: "700" },
+
+  // «مُهيّئ» pre-arrival card
+  prepCard: {
+    alignSelf: "stretch",
+    backgroundColor: "#faf2dd",
+    borderWidth: 1,
+    borderColor: "#ecdcb6",
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 16,
+    gap: 10,
+  },
+  prepHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  prepRole: { color: "#9a917f", fontSize: 11, fontWeight: "600" },
+  prepNameRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  prepName: { color: "#3d3424", fontSize: 15, fontWeight: "800" },
+  prepIntro: { color: "#6b6457", fontSize: 12, textAlign: "right", lineHeight: 18 },
+  prepBlock: {
+    backgroundColor: "#fdf8ec",
+    borderWidth: 1,
+    borderColor: "#e6dcc8",
+    borderRadius: 12,
+    padding: 11,
+    gap: 7,
+  },
+  prepBlockHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 6,
+  },
+  prepBlockTitle: { color: "#3d3424", fontSize: 13, fontWeight: "800", textAlign: "right" },
+  prepGreeting: {
+    color: "#1f8a80",
+    fontSize: 14,
+    fontWeight: "700",
+    textAlign: "right",
+    lineHeight: 22,
+  },
+  prepItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  prepItemText: { color: "#3f3a30", fontSize: 13, textAlign: "right", flexShrink: 1 },
+  prepFlagText: { color: "#8a3a26", fontSize: 13, textAlign: "right", flexShrink: 1, lineHeight: 19 },
+  prepBullet: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#1f8a80",
+    marginTop: 2,
+  },
 });
