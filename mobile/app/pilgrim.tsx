@@ -84,8 +84,8 @@ const VITALS = [
 // scanner resolves this exact QR to the full health profile.
 const ME = {
   id: "3C27343B9F43",
-  initials: "RS",
-  name: "Rachel Smith",
+  initials: "م ع",
+  name: "محمد عبدالله",
   identityId: "2419875036",
   age: 85,
   nationality: "Solomon Islands",
@@ -423,7 +423,6 @@ function TabHelp({ onCall, onChat }: { onCall: () => void; onChat: () => void })
       {/* 937 hotline */}
       <View style={styles.card}>
         <View style={styles.hotlineTop}>
-          <Text style={styles.hotlineDigits}>937</Text>
           <View style={styles.hotlineInfo}>
             <Text style={styles.hotlineTag}>الخط الساخن</Text>
             <Text style={styles.hotlineTitle}>طوارئ صحية للحجاج</Text>

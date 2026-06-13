@@ -41,7 +41,7 @@ const REGISTRY: Record<string, RegistryEntry> = {
   },
   "3C27343B9F43": {
     id: "3C27343B9F43",
-    name: "Rachel Smith",
+    name: "محمد عبدالله",
     age: 85,
     nationality: "Solomon Islands",
     passport: "3C27343B9F43",

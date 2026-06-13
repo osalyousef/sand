@@ -252,9 +252,13 @@ export const MOCK_PREDICTED_POINTS: [number, number, number][] = PREDICTED_CLUST
   ] as [number, number, number])
 );
 
+// Reds first, then yellows. A proper total-order comparator (rank difference)
+// — an inconsistent one sorts differently under Node's V8 vs the browser's,
+// which reorders the list and breaks SSR hydration.
+const RISK_RANK: Record<RiskLevel, number> = { red: 0, yellow: 1, green: 2 };
 export const MOCK_ALERTS = MOCK_PILGRIMS
   .filter(p => p.riskLevel !== "green")
-  .sort((a, b) => (a.riskLevel === "red" ? -1 : b.riskLevel === "red" ? 1 : 0))
+  .sort((a, b) => RISK_RANK[a.riskLevel] - RISK_RANK[b.riskLevel])
   .slice(0, 12);
 
 export const MOCK_TEAMS: MockTeam[] = [

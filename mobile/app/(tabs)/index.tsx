@@ -235,14 +235,7 @@ function QuickLinks() {
         <Building2 color="#b07d12" size={20} />
         <Text style={styles.quickText}>المنشآت الصحية</Text>
       </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.quickCard}
-        activeOpacity={0.8}
-        onPress={() => router.push("/data")}
-      >
-        <BarChart3 color="#b07d12" size={20} />
-        <Text style={styles.quickText}>البيانات والتحليلات</Text>
-      </TouchableOpacity>
+
     </View>
   );
 }
